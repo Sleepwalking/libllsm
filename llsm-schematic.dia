@@ -623,12 +623,12 @@ Generator#</dia:string>
         <dia:point val="63,23.5"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="52.9,23.1262;63,23.8737"/>
+        <dia:rectangle val="55.1963,23.0982;63,23.9018"/>
       </dia:attribute>
       <dia:attribute name="text">
         <dia:composite type="text">
           <dia:attribute name="string">
-            <dia:string>#Voiced Noise Spectral Envelope#</dia:string>
+            <dia:string>#Noise Spectral Envelope#</dia:string>
           </dia:attribute>
           <dia:attribute name="font">
             <dia:font family="sans" style="0" name="Helvetica"/>
@@ -637,7 +637,7 @@ Generator#</dia:string>
             <dia:real val="0.80000000000000004"/>
           </dia:attribute>
           <dia:attribute name="pos">
-            <dia:point val="63,23.7212"/>
+            <dia:point val="63,23.7119"/>
           </dia:attribute>
           <dia:attribute name="color">
             <dia:color val="#000000"/>
@@ -725,7 +725,7 @@ Generator#</dia:string>
         <dia:real val="0.5"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="0" to="O94" connection="8"/>
+        <dia:connection handle="0" to="O92" connection="8"/>
         <dia:connection handle="1" to="O16" connection="12"/>
       </dia:connections>
     </dia:object>
@@ -2710,12 +2710,12 @@ Sinusoidal Parameters#</dia:string>
         <dia:point val="37.5,41.4"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="37.5,41.0263;47.6,41.7738"/>
+        <dia:rectangle val="37.4813,40.9982;45.285,41.8018"/>
       </dia:attribute>
       <dia:attribute name="text">
         <dia:composite type="text">
           <dia:attribute name="string">
-            <dia:string>#Voiced Noise Spectral Envelope#</dia:string>
+            <dia:string>#Noise Spectral Envelope#</dia:string>
           </dia:attribute>
           <dia:attribute name="font">
             <dia:font family="sans" style="0" name="Helvetica"/>
@@ -2724,7 +2724,7 @@ Sinusoidal Parameters#</dia:string>
             <dia:real val="0.80000000000000004"/>
           </dia:attribute>
           <dia:attribute name="pos">
-            <dia:point val="37.5,41.6213"/>
+            <dia:point val="37.5,41.6119"/>
           </dia:attribute>
           <dia:attribute name="color">
             <dia:color val="#000000"/>
@@ -3231,77 +3231,6 @@ Sinusoidal Parameters#</dia:string>
     </dia:object>
     <dia:object type="Standard - ZigZagLine" version="1" id="O89">
       <dia:attribute name="obj_pos">
-        <dia:point val="12,30.5"/>
-      </dia:attribute>
-      <dia:attribute name="obj_bb">
-        <dia:rectangle val="11.95,30.45;26.8309,40.1118"/>
-      </dia:attribute>
-      <dia:attribute name="orth_points">
-        <dia:point val="12,30.5"/>
-        <dia:point val="12,33"/>
-        <dia:point val="26.5,33"/>
-        <dia:point val="26.5,40"/>
-      </dia:attribute>
-      <dia:attribute name="orth_orient">
-        <dia:enum val="1"/>
-        <dia:enum val="0"/>
-        <dia:enum val="1"/>
-      </dia:attribute>
-      <dia:attribute name="autorouting">
-        <dia:boolean val="false"/>
-      </dia:attribute>
-      <dia:attribute name="end_arrow">
-        <dia:enum val="3"/>
-      </dia:attribute>
-      <dia:attribute name="end_arrow_length">
-        <dia:real val="0.5"/>
-      </dia:attribute>
-      <dia:attribute name="end_arrow_width">
-        <dia:real val="0.5"/>
-      </dia:attribute>
-      <dia:connections>
-        <dia:connection handle="0" to="O86" connection="14"/>
-        <dia:connection handle="1" to="O57" connection="2"/>
-      </dia:connections>
-    </dia:object>
-    <dia:object type="Standard - Text" version="1" id="O90">
-      <dia:attribute name="obj_pos">
-        <dia:point val="26.5,40"/>
-      </dia:attribute>
-      <dia:attribute name="obj_bb">
-        <dia:rectangle val="26.5,39.405;35.66,40.1525"/>
-      </dia:attribute>
-      <dia:attribute name="text">
-        <dia:composite type="text">
-          <dia:attribute name="string">
-            <dia:string>#Spectral Envelope Threshold#</dia:string>
-          </dia:attribute>
-          <dia:attribute name="font">
-            <dia:font family="sans" style="0" name="Helvetica"/>
-          </dia:attribute>
-          <dia:attribute name="height">
-            <dia:real val="0.80000000000000004"/>
-          </dia:attribute>
-          <dia:attribute name="pos">
-            <dia:point val="26.5,40"/>
-          </dia:attribute>
-          <dia:attribute name="color">
-            <dia:color val="#000000"/>
-          </dia:attribute>
-          <dia:attribute name="alignment">
-            <dia:enum val="0"/>
-          </dia:attribute>
-        </dia:composite>
-      </dia:attribute>
-      <dia:attribute name="valign">
-        <dia:enum val="3"/>
-      </dia:attribute>
-      <dia:connections>
-        <dia:connection handle="0" to="O57" connection="2"/>
-      </dia:connections>
-    </dia:object>
-    <dia:object type="Standard - ZigZagLine" version="1" id="O91">
-      <dia:attribute name="obj_pos">
         <dia:point val="10,19"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
@@ -3334,7 +3263,7 @@ Sinusoidal Parameters#</dia:string>
         <dia:connection handle="0" to="O47" connection="0"/>
       </dia:connections>
     </dia:object>
-    <dia:object type="Standard - ZigZagLine" version="1" id="O92">
+    <dia:object type="Standard - ZigZagLine" version="1" id="O90">
       <dia:attribute name="obj_pos">
         <dia:point val="24,6"/>
       </dia:attribute>
@@ -3369,7 +3298,7 @@ Sinusoidal Parameters#</dia:string>
         <dia:connection handle="1" to="O59" connection="3"/>
       </dia:connections>
     </dia:object>
-    <dia:object type="Flowchart - Box" version="0" id="O93">
+    <dia:object type="Flowchart - Box" version="0" id="O91">
       <dia:attribute name="obj_pos">
         <dia:point val="69,27"/>
       </dia:attribute>
@@ -3414,7 +3343,7 @@ Sinusoidal Parameters#</dia:string>
         </dia:composite>
       </dia:attribute>
     </dia:object>
-    <dia:object type="Flowchart - Box" version="0" id="O94">
+    <dia:object type="Flowchart - Box" version="0" id="O92">
       <dia:attribute name="obj_pos">
         <dia:point val="69,32"/>
       </dia:attribute>
@@ -3459,7 +3388,7 @@ Sinusoidal Parameters#</dia:string>
         </dia:composite>
       </dia:attribute>
     </dia:object>
-    <dia:object type="Standard - Line" version="0" id="O95">
+    <dia:object type="Standard - Line" version="0" id="O93">
       <dia:attribute name="obj_pos">
         <dia:point val="70,25"/>
       </dia:attribute>
@@ -3483,10 +3412,10 @@ Sinusoidal Parameters#</dia:string>
         <dia:real val="0.5"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="1" to="O93" connection="1"/>
+        <dia:connection handle="1" to="O91" connection="1"/>
       </dia:connections>
     </dia:object>
-    <dia:object type="Standard - Line" version="0" id="O96">
+    <dia:object type="Standard - Line" version="0" id="O94">
       <dia:attribute name="obj_pos">
         <dia:point val="72,25"/>
       </dia:attribute>
@@ -3510,10 +3439,10 @@ Sinusoidal Parameters#</dia:string>
         <dia:real val="0.5"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="1" to="O94" connection="3"/>
+        <dia:connection handle="1" to="O92" connection="3"/>
       </dia:connections>
     </dia:object>
-    <dia:object type="Flowchart - Box" version="0" id="O97">
+    <dia:object type="Flowchart - Box" version="0" id="O95">
       <dia:attribute name="obj_pos">
         <dia:point val="78,27"/>
       </dia:attribute>
@@ -3559,7 +3488,7 @@ Normalization#</dia:string>
         </dia:composite>
       </dia:attribute>
     </dia:object>
-    <dia:object type="Standard - Line" version="0" id="O98">
+    <dia:object type="Standard - Line" version="0" id="O96">
       <dia:attribute name="obj_pos">
         <dia:point val="73,28.5"/>
       </dia:attribute>
@@ -3583,11 +3512,11 @@ Normalization#</dia:string>
         <dia:real val="0.5"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="0" to="O93" connection="8"/>
-        <dia:connection handle="1" to="O97" connection="7"/>
+        <dia:connection handle="0" to="O91" connection="8"/>
+        <dia:connection handle="1" to="O95" connection="7"/>
       </dia:connections>
     </dia:object>
-    <dia:object type="Standard - ZigZagLine" version="1" id="O99">
+    <dia:object type="Standard - ZigZagLine" version="1" id="O97">
       <dia:attribute name="obj_pos">
         <dia:point val="85,28.5"/>
       </dia:attribute>
@@ -3618,16 +3547,16 @@ Normalization#</dia:string>
         <dia:real val="0.5"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="0" to="O97" connection="8"/>
+        <dia:connection handle="0" to="O95" connection="8"/>
         <dia:connection handle="1" to="O29" connection="12"/>
       </dia:connections>
     </dia:object>
-    <dia:object type="Standard - Text" version="1" id="O100">
+    <dia:object type="Standard - Text" version="1" id="O98">
       <dia:attribute name="obj_pos">
         <dia:point val="73,30"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="73,29.6751;73.7124,30.0997"/>
+        <dia:rectangle val="73,29.685;73.7025,30.08"/>
       </dia:attribute>
       <dia:attribute name="text">
         <dia:composite type="text">
@@ -3655,15 +3584,15 @@ Normalization#</dia:string>
         <dia:enum val="3"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="0" to="O93" connection="15"/>
+        <dia:connection handle="0" to="O91" connection="15"/>
       </dia:connections>
     </dia:object>
-    <dia:object type="Standard - Text" version="1" id="O101">
+    <dia:object type="Standard - Text" version="1" id="O99">
       <dia:attribute name="obj_pos">
         <dia:point val="73,35"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="73,34.6751;73.7124,35.0998"/>
+        <dia:rectangle val="73,34.685;73.7025,35.08"/>
       </dia:attribute>
       <dia:attribute name="text">
         <dia:composite type="text">
@@ -3691,15 +3620,15 @@ Normalization#</dia:string>
         <dia:enum val="3"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="0" to="O94" connection="15"/>
+        <dia:connection handle="0" to="O92" connection="15"/>
       </dia:connections>
     </dia:object>
-    <dia:object type="Standard - Text" version="1" id="O102">
+    <dia:object type="Standard - Text" version="1" id="O100">
       <dia:attribute name="obj_pos">
         <dia:point val="85,30"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="85,29.6751;85.7124,30.0997"/>
+        <dia:rectangle val="85,29.685;85.7025,30.08"/>
       </dia:attribute>
       <dia:attribute name="text">
         <dia:composite type="text">
@@ -3727,7 +3656,7 @@ Normalization#</dia:string>
         <dia:enum val="3"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="0" to="O97" connection="15"/>
+        <dia:connection handle="0" to="O95" connection="15"/>
       </dia:connections>
     </dia:object>
   </dia:layer>
