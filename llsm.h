@@ -44,7 +44,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
 #define FP_TYPE double
 
-// llsm_sinparam: model parameters for sinusoidal signals
+/*
+  llsm_sinparam: model parameters for sinusoidal signals
+*/
 typedef struct {
   FP_TYPE** freq; // Hz
   FP_TYPE** ampl; // linear
@@ -53,7 +55,9 @@ typedef struct {
   int nhar;
 } llsm_sinparam;
 
-// llsm_conf: model configurations
+/*
+  llsm_conf: model configurations
+*/
 typedef struct {
   int nfrm;             // number of frames
   int nhop;             // hop size in samples
@@ -65,7 +69,9 @@ typedef struct {
   FP_TYPE noswrap;      // wrapping factor for noise spectrum
 } llsm_conf;
 
-// llsm: Low Level Speech Model paramters
+/*
+  llsm: Low Level Speech Model paramters
+*/
 typedef struct {
   llsm_sinparam* sinu;  // sinusoidal parameters
   llsm_sinparam* eenv;  // sinusoidal parameters for noise envergy
@@ -74,7 +80,9 @@ typedef struct {
   llsm_conf conf;       // configuration
 } llsm;
 
-// llsm_parameters: configurations for analysis/synthesis processes
+/*
+  llsm_parameters: configurations for analysis/synthesis processes
+*/
 /*
   note: there might be a naming confusion between llsm and llsm_parameters. The former is the model
     paramters (i.e. what we get after analyzing the speech); the later is a set of configurations for
