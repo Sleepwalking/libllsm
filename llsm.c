@@ -44,6 +44,7 @@ llsm_parameters llsm_init() {
   ret.a_tfft = 0.04;
   ret.a_rwin = 2.5;
   ret.a_mvf = 8000.0;
+  ret.a_noswrap = 5000.0;
   ret.s_fs = 0;
   return ret;
 }
@@ -316,7 +317,7 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
     }
   }
   
-  FP_TYPE* freqwrap = llsm_wrap_freq(0, conf.nosf, conf.nnos, 5000);
+  FP_TYPE* freqwrap = llsm_wrap_freq(0, conf.nosf, conf.nnos, conf.noswrap);
   for(int i = 0; i < conf.nfrm; i ++) {
     FP_TYPE* spec = llsm_spectrum_from_envelope(freqwrap, wrapped_spectrogram[i], conf.nnos, nfft / 2, param.s_fs);
     for(int j = 0; j < nfft / 2; j ++) {
@@ -429,7 +430,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
     noise_spectrogram, NULL, NULL);
   free(resynth);
   
-  FP_TYPE* freqwrap = llsm_wrap_freq(0, fs / 2, param.a_nnos, 5000);
+  FP_TYPE* freqwrap = llsm_wrap_freq(0, fs / 2, param.a_nnos, param.a_noswrap);
   for(int t = 0; t < nf0; t ++) {
   /*
     // cut out the spectrum content around harmonics
@@ -510,6 +511,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   model -> conf.nnos = param.a_nnos;
   model -> conf.nosf = fs / 2.0;
   model -> conf.mvf = param.a_mvf;
+  model -> conf.noswrap = param.a_noswrap;
 
   return model;
 }
