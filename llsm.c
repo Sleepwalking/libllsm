@@ -57,8 +57,10 @@ static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int f
   FP_TYPE* ybuffr = calloc(nfft, sizeof(FP_TYPE));
   FP_TYPE* ybuffi = calloc(nfft, sizeof(FP_TYPE));
   for(int t = 0; t < nf0; t ++) {
+    // 4 times fundamental period is the minimal window length that resolves the harmonics
+    //   for generalized Hamming/Blackman windows
     FP_TYPE resf = f0[t];
-    int winlen = resf > 0 ? min(nfft, floor(fs / resf * 2.5) * 2) : param.a_nhop * 2;
+    int winlen = resf > 0 ? min(nfft, floor(fs / resf * 2.0) * 2) : param.a_nhop * 2;
     int tn = t * param.a_nhop;
     
     FP_TYPE* w = NULL;
