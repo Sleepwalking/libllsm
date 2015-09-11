@@ -33,6 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #define LLSM_MFUNCS
 
 #include "common.h"
+#include <stdlib.h>
 
 #define def_singlepass(name, op, init) \
 inline FP_TYPE name(FP_TYPE* src, int n) { \
@@ -50,6 +51,13 @@ def_singlepass(sumfp, def_add, 0)
 def_singlepass(maxfp, def_max, src[0])
 def_singlepass(minfp, def_min, src[0])
 
+inline FP_TYPE* boxcar(int n) {
+  FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
+  for(int i = 0; i < n; i ++)
+    ret[i] = 1.0;
+  return ret;
+}
+
 inline FP_TYPE* hanning(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
@@ -61,6 +69,13 @@ inline FP_TYPE* hamming(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
     ret[i] = 0.54 - 0.46 * cos(2 * M_PI * i / (n - 1));
+  return ret;
+}
+
+inline FP_TYPE* mltsine(int n) {
+  FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
+  for(int i = 0; i < n; i ++)
+    ret[i] = sin(M_PI / n * (i + 0.5));
   return ret;
 }
 
@@ -179,6 +194,13 @@ inline FP_TYPE* conv(FP_TYPE* x, FP_TYPE* h, int nx, int nh) {
 
 inline FP_TYPE* interp1(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx) {
   return llsm_interp(xi, yi, ni, x, nx);
+}
+
+inline FP_TYPE* white_noise(FP_TYPE amplitude, int n) {
+  FP_TYPE* y = calloc(n, sizeof(FP_TYPE));
+  for(int i = 0; i < n; i ++)
+    y[i] = ((FP_TYPE)rand() / RAND_MAX - 0.5) * amplitude * 2.0;
+  return y;
 }
 
 #endif

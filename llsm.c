@@ -300,14 +300,15 @@ static FP_TYPE* synth_sinusoid_frame(FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse
   return x;
 }
 
+#define QUADHOP
 static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wrapped_spectrogram, int winsize) {
   int nfft = winsize * conf.nhop * 2;
   int ny = conf.nfrm * conf.nhop + nfft * 16;
   FP_TYPE* y = calloc(ny, sizeof(FP_TYPE));
   FP_TYPE* w = hanning(nfft);
-  FP_TYPE* realbuff = calloc(nfft, sizeof(FP_TYPE));
-  FP_TYPE* imagbuff = calloc(nfft, sizeof(FP_TYPE));
-  FP_TYPE* yfrm = calloc(nfft, sizeof(FP_TYPE));
+  FP_TYPE* realbuff = calloc(nfft * 2, sizeof(FP_TYPE));
+  FP_TYPE* imagbuff = calloc(nfft * 2, sizeof(FP_TYPE));
+  FP_TYPE* yfrm = calloc(nfft * 2, sizeof(FP_TYPE));
   FP_TYPE fftbuff[65536];
   FP_TYPE norm_factor = 0.5 * sumfp(w, nfft);
   FP_TYPE norm_factor_win = 0;
@@ -315,16 +316,39 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
     int i = 0;
     while(i < nfft) {
       norm_factor_win += w[i];
+#     ifdef QUADHOP
+      i += conf.nhop / 2;
+#     else
       i += conf.nhop;
+#     endif
     }
   }
+  for(int j = 0; j < nfft; j ++)
+    w[j] = sqrt(w[j]);
   
+  FP_TYPE* x = white_noise(1.0, ny);
   FP_TYPE* freqwrap = llsm_wrap_freq(0, conf.nosf, conf.nnos, conf.noswrap);
+# ifdef QUADHOP
+  for(int i = 0; i < conf.nfrm * 2; i ++) {
+    int t = i * conf.nhop / 2;
+    FP_TYPE* spec = llsm_spectrum_from_envelope(freqwrap, wrapped_spectrogram[i / 2], conf.nnos, nfft / 2, param.s_fs);
+# else
   for(int i = 0; i < conf.nfrm; i ++) {
+    int t = i * conf.nhop;
     FP_TYPE* spec = llsm_spectrum_from_envelope(freqwrap, wrapped_spectrogram[i], conf.nnos, nfft / 2, param.s_fs);
+# endif
+    FP_TYPE* xfrm_0 = fetch_frame(x, ny, t, nfft);
+    FP_TYPE* xfrm = calloc(nfft * 2, sizeof(FP_TYPE));
+    for(int j = 0; j < nfft; j ++)
+      xfrm[j] = xfrm_0[j] * w[j];
+    free(xfrm_0);
+    fft(xfrm, NULL, realbuff, imagbuff, nfft, fftbuff);
     for(int j = 0; j < nfft / 2; j ++) {
+
       FP_TYPE a = exp(spec[j]) * norm_factor; // amplitude
-      FP_TYPE p = ((FP_TYPE)rand() / RAND_MAX - 0.5) * 2.0 * M_PI;
+      //FP_TYPE p = ((FP_TYPE)rand() / RAND_MAX - 0.5) * 2.0 * M_PI;
+      FP_TYPE p = atan2(imagbuff[j], realbuff[j]);
+
       realbuff[j] = a * cos(p);
       imagbuff[j] = a * sin(p);
     }
@@ -332,15 +356,16 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
     complete_asymm(imagbuff, nfft);
     ifft(realbuff, imagbuff, yfrm, NULL, nfft, fftbuff);
     for(int j = 0; j < nfft; j ++) {
-      int idx = i * conf.nhop + j - nfft / 2;
-      if(idx < 0) continue;
-      yfrm[j] *= w[j] / norm_factor_win;
-      y[idx] += yfrm[j];
+      int idx = t + j - nfft / 2;
+      if(idx >= 0)
+        y[idx] += yfrm[j] * w[j] / norm_factor_win;
     }
     free(spec);
+    free(xfrm);
   }
   
   free(w);
+  free(x);
   free(yfrm);
   free(realbuff);
   free(imagbuff);
@@ -577,7 +602,6 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   FP_TYPE* y_low  = conv(y_nos, h_low , *ny, filtord);
   free(h_high);
   free(h_low);
-  free(y_nos);
   
   // DA3, D4
   FP_TYPE* y_high_normalized = calloc(*ny, sizeof(FP_TYPE));
@@ -617,9 +641,11 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   
   // DB1, DB2
   for(int i = 0; i < *ny - nfft; i ++)
+  //  y_sin[i] = y_nos[i];
     y_sin[i] += y_low[i + filtord / 2] + y_high_normalized[i] * y_env_positive[i];
   free(y_env_positive);
   free(y_high_normalized);
+  free(y_nos);
   free(y_low);
   
   return y_sin;
