@@ -98,6 +98,11 @@ void llsm_idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n);
 FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, char* type, char* window);
 FP_TYPE* llsm_convolution(FP_TYPE* x, FP_TYPE* h, int nx, int nh);
 FP_TYPE* llsm_interp(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx);
+double llsm_fastatan2(double y, double x);
+
+inline double fastatan2(double y, double x) {
+  return llsm_fastatan2(y, x);
+}
 
 inline void fft_core(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, FP_TYPE* buffer, FP_TYPE mode) {
   for(int i = 0; i < n; i ++) {

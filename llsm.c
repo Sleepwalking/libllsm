@@ -32,6 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include "llsm.h"
 #include <stdlib.h>
 #include <string.h>
+#include "external/fastapprox/fasttrig.h"
+#include "external/fastapprox/fastexp.h"
 #include "math-funcs.h"
 #include "envelope.h"
 
@@ -295,7 +297,7 @@ static FP_TYPE* synth_sinusoid_frame(FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse
       break;
     FP_TYPE tphffs = 2.0 * M_PI / fs * h_f;
     for(int t = - length / 2; t < length / 2; t ++)
-      x[t + length / 2] += cos(tphffs * t + h_p) * h_a;
+      x[t + length / 2] += fastcosfull(tphffs * t + h_p) * h_a;
   }
   return x;
 }
@@ -337,8 +339,8 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
       xfrm[j] *= w[j];
     fft(xfrm, NULL, realbuff, imagbuff, nfft, fftbuff);
     for(int j = 0; j < nfft / 2; j ++) {
-      FP_TYPE a = exp(spec[j]) * norm_factor; // amplitude
-      FP_TYPE p = atan2(imagbuff[j], realbuff[j]);
+      FP_TYPE a = fastexp(spec[j]) * norm_factor; // amplitude
+      FP_TYPE p = fastatan2(imagbuff[j], realbuff[j]);
       realbuff[j] = a * cos(p);
       imagbuff[j] = a * sin(p);
     }
