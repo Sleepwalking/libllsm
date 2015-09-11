@@ -300,15 +300,20 @@ static FP_TYPE* synth_sinusoid_frame(FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse
   return x;
 }
 
-#define QUADHOP
 static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wrapped_spectrogram, int winsize) {
+/*
+  To suppress glitches caused by aliasing, we apply MLT sine window twice, before analysis and after synthesis respectively;
+  Overlapping factor should be greater or equal to 4 for MLT sine window;
+  To preserve time resolution, we actually lower the hopsize by half, meanwhile double sampling wrapped_spectrogram.
+*/
+  conf.nhop /= 2;
   int nfft = winsize * conf.nhop * 2;
-  int ny = conf.nfrm * conf.nhop + nfft * 16;
+  int ny = conf.nfrm * conf.nhop * 2 + nfft * 16;
   FP_TYPE* y = calloc(ny, sizeof(FP_TYPE));
   FP_TYPE* w = hanning(nfft);
-  FP_TYPE* realbuff = calloc(nfft * 2, sizeof(FP_TYPE));
-  FP_TYPE* imagbuff = calloc(nfft * 2, sizeof(FP_TYPE));
-  FP_TYPE* yfrm = calloc(nfft * 2, sizeof(FP_TYPE));
+  FP_TYPE* realbuff = calloc(nfft, sizeof(FP_TYPE));
+  FP_TYPE* imagbuff = calloc(nfft, sizeof(FP_TYPE));
+  FP_TYPE* yfrm = calloc(nfft, sizeof(FP_TYPE));
   FP_TYPE fftbuff[65536];
   FP_TYPE norm_factor = 0.5 * sumfp(w, nfft);
   FP_TYPE norm_factor_win = 0;
@@ -316,11 +321,7 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
     int i = 0;
     while(i < nfft) {
       norm_factor_win += w[i];
-#     ifdef QUADHOP
-      i += conf.nhop / 2;
-#     else
       i += conf.nhop;
-#     endif
     }
   }
   for(int j = 0; j < nfft; j ++)
@@ -328,27 +329,16 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
   
   FP_TYPE* x = white_noise(1.0, ny);
   FP_TYPE* freqwrap = llsm_wrap_freq(0, conf.nosf, conf.nnos, conf.noswrap);
-# ifdef QUADHOP
   for(int i = 0; i < conf.nfrm * 2; i ++) {
-    int t = i * conf.nhop / 2;
-    FP_TYPE* spec = llsm_spectrum_from_envelope(freqwrap, wrapped_spectrogram[i / 2], conf.nnos, nfft / 2, param.s_fs);
-# else
-  for(int i = 0; i < conf.nfrm; i ++) {
     int t = i * conf.nhop;
-    FP_TYPE* spec = llsm_spectrum_from_envelope(freqwrap, wrapped_spectrogram[i], conf.nnos, nfft / 2, param.s_fs);
-# endif
-    FP_TYPE* xfrm_0 = fetch_frame(x, ny, t, nfft);
-    FP_TYPE* xfrm = calloc(nfft * 2, sizeof(FP_TYPE));
+    FP_TYPE* spec = llsm_spectrum_from_envelope(freqwrap, wrapped_spectrogram[i / 2], conf.nnos, nfft / 2, param.s_fs);
+    FP_TYPE* xfrm = fetch_frame(x, ny, t, nfft);
     for(int j = 0; j < nfft; j ++)
-      xfrm[j] = xfrm_0[j] * w[j];
-    free(xfrm_0);
+      xfrm[j] *= w[j];
     fft(xfrm, NULL, realbuff, imagbuff, nfft, fftbuff);
     for(int j = 0; j < nfft / 2; j ++) {
-
       FP_TYPE a = exp(spec[j]) * norm_factor; // amplitude
-      //FP_TYPE p = ((FP_TYPE)rand() / RAND_MAX - 0.5) * 2.0 * M_PI;
       FP_TYPE p = atan2(imagbuff[j], realbuff[j]);
-
       realbuff[j] = a * cos(p);
       imagbuff[j] = a * sin(p);
     }
@@ -450,6 +440,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   // C7 -> CB7
   for(int i = 0; i < nx; i ++)
     resynth[i] = x[i] - resynth[i];
+  //wavwrite(resynth, nx, fs, 16, "/tmp/noise.wav");
   
   FP_TYPE** noise_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
   model -> noise = (FP_TYPE**)calloc(nf0, sizeof(FP_TYPE*));

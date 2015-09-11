@@ -31,10 +31,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <math.h>
 #include "../external/matlabfunctions.h"
 #include "../external/libpyin/pyin.h"
 #include "../llsm.h"
+
+double get_time() {
+  struct timeval t;
+  gettimeofday(&t, NULL);
+  return (t.tv_sec + (t.tv_usec / 1000000.0)) * 1000.0;
+}
 
 int main(int argc, char** argv) {
   if(argc < 2) {
@@ -58,13 +65,18 @@ int main(int argc, char** argv) {
   double* f0 = pyin_analyze(param, x, nx, fs, & nfrm);
 
   llsm_parameters lparam = llsm_init();
+  lparam.a_mvf = 11000;
   lparam.a_nhop = pow(2, ceil(log2(fs * 0.005)));
   llsm* model = llsm_analyze(lparam, x, nx, fs, f0, nfrm);
 
   lparam.s_fs = fs;
   
+  double t0 = get_time();
   int ny;
   double* y = llsm_synthesize(lparam, model, & ny);
+  double tspent = get_time() - t0;
+  printf("%f ms, %fs/s\n", tspent, (double)nx / fs / tspent * 1000);
+  
   wavwrite(y, ny, lparam.s_fs, nbit, "resynth.wav");
 
   llsm_delete(model);
