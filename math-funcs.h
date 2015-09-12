@@ -98,10 +98,23 @@ void llsm_idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n);
 FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, char* type, char* window);
 FP_TYPE* llsm_convolution(FP_TYPE* x, FP_TYPE* h, int nx, int nh);
 FP_TYPE* llsm_interp(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx);
-double llsm_fastatan2(double y, double x);
 
 inline double fastatan2(double y, double x) {
-  return llsm_fastatan2(y, x);
+  double coeff_1 = M_PI / 4.0;
+  double coeff_2 = 3.0 * coeff_1;
+  double abs_y = fabs(y) + 1e-10; // kludge to prevent 0/0 condition
+  double angle = 0;
+  if(x >= 0) {
+    double r = (x - abs_y) / (x + abs_y);
+    angle = coeff_1 - coeff_1 * r;
+  } else {
+    double r = (x + abs_y) / (abs_y - x);
+    angle = coeff_2 - coeff_1 * r;
+  }
+  if(y < 0)
+    return -angle; // negate if in quad III or IV
+  else
+   return angle;
 }
 
 inline void fft_core(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, FP_TYPE* buffer, FP_TYPE mode) {
