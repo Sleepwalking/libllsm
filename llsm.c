@@ -53,7 +53,7 @@ llsm_parameters llsm_init() {
 
 static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nf0,
   int nfft, FP_TYPE* fftbuff, const char* wtype,
-  FP_TYPE** spectrogram, FP_TYPE** phasegram, FP_TYPE** phasegram_d) {
+  FP_TYPE** spectrogram, FP_TYPE** phasegram, FP_TYPE** phasegram_d, FP_TYPE* minvec) {
 
   FP_TYPE* xbuff = calloc(nfft, sizeof(FP_TYPE));
   FP_TYPE* ybuffr = calloc(nfft, sizeof(FP_TYPE));
@@ -78,8 +78,9 @@ static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int f
     FP_TYPE* spec_magn, * spec_phse_, * spec_phse, * spec_phse_d;
     xfrm = xfrm_d = spec_magn = spec_phse_ = spec_phse = spec_phse_d = NULL;
     
-    xfrm   = fetch_frame(x, nx, tn, winlen);
-    FP_TYPE mean_xfrm   = sumfp(xfrm, winlen) / winlen;
+    xfrm = fetch_frame(x, nx, tn, winlen);
+    FP_TYPE mean_xfrm = sumfp(xfrm, winlen) / winlen;
+    if(minvec != NULL) minvec[t] = minfp(xfrm, winlen);
     for(int i = 0; i < winlen; i ++)
       xfrm[i] -= mean_xfrm;
     if(phasegram_d) {
@@ -365,7 +366,45 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
   return y;
 }
 
+static int* gen_ps_instants(FP_TYPE* f0, int nhop, int nf0, int nx, int fs, int* ni) {
+  FP_TYPE t = 0;
+  *ni = 0;
+  int Ni = 100;
+  int* instants = calloc(100, sizeof(int));
+  while(t < (double)nx / fs) {
+    int i = t * fs / nhop;
+    instants[(*ni) ++] = t * fs;
+    if((*ni) * 2 > Ni) {
+      Ni *= 2;
+      instants = realloc(instants, Ni * sizeof(int));
+    }
+    t += 1.0 / max(100, f0[i >= nf0 ? nf0 - 1 : i]);
+  }
+  return instants;
+}
+
+static void subtract_minimum_envelope(FP_TYPE* x, int nx, FP_TYPE* f0, int nhop, int nfrm, int fs) {
+  int ninstant = 0;
+  int* env_instants = gen_ps_instants(f0, nhop, nfrm, nx, fs, & ninstant);
+  FP_TYPE* fenv_instants = calloc(ninstant, sizeof(FP_TYPE));
+  int* env_winlen = calloc(ninstant, sizeof(int));
+  for(int i = 0; i < ninstant; i ++) env_winlen[i] = fs / f0[i];
+  FP_TYPE* env_samples = llsm_nonuniform_envelope(x, nx, env_instants, env_winlen, ninstant, 0);
+  FP_TYPE* iota = calloc(nx, sizeof(FP_TYPE));
+  for(int i = 0; i < nx; i ++) iota[i] = i;
+  for(int i = 0; i < ninstant; i ++) fenv_instants[i] = env_instants[i];
+  FP_TYPE* env = interp1(fenv_instants, env_samples, ninstant, iota, nx);
+  for(int i = 0; i < nx; i ++) x[i] -= env[i];
+  free(env_instants);
+  free(fenv_instants);
+  free(env_winlen);
+  free(env_samples);
+  free(iota);
+  free(env);
+}
+
 void llsm_delete(llsm* model) {
+  if(model == NULL) return;
   int nfrm = model -> conf.nfrm;
   free2d(model -> noise, nfrm);
   free2d(model -> sinu -> freq, nfrm);
@@ -376,6 +415,7 @@ void llsm_delete(llsm* model) {
   free2d(model -> eenv -> phse, nfrm);
   free(model -> sinu);
   free(model -> eenv);
+  if(model -> emin != NULL) free(model -> emin);
   free(model -> f0);
   free(model);
 }
@@ -393,7 +433,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   FP_TYPE** phasegram_d = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
 
   spectrogram_analyze(param, x, nx, fs, f0, nf0, nfft, fftbuff, "blackman_harris",
-    spectrogram, phasegram, phasegram_d);
+    spectrogram, phasegram, phasegram_d, NULL);
 
   // C3
   model -> f0 = refine_f0(param, nfft, fs, f0, nf0, spectrogram, phasegram, phasegram_d);
@@ -442,12 +482,11 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   // C7 -> CB7
   for(int i = 0; i < nx; i ++)
     resynth[i] = x[i] - resynth[i];
-  //wavwrite(resynth, nx, fs, 16, "/tmp/noise.wav");
   
   FP_TYPE** noise_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
   model -> noise = (FP_TYPE**)calloc(nf0, sizeof(FP_TYPE*));
   spectrogram_analyze(param, resynth, nx, fs, f0, nf0, nfft, fftbuff, "hanning",
-    noise_spectrogram, NULL, NULL);
+    noise_spectrogram, NULL, NULL, NULL);
   free(resynth);
   
   FP_TYPE* freqwrap = llsm_wrap_freq(0, fs / 2, param.a_nnos, param.a_noswrap);
@@ -475,18 +514,22 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   const int filtord = 60;
   FP_TYPE* h  = fir1(filtord, param.a_mvf / fs * 2.0, "highpass", "hanning");
   FP_TYPE* xh = conv(x, h, nx, filtord);
+  free(h);
   
   // CB3
   for(int i = 0; i < nx + filtord - 1; i ++)
-    xh[i] = fabs(xh[i]);
-  free(h);
-
+    xh[i] = xh[i] * xh[i];
+  int mavgord = round(fs / param.a_mvf * 5);
+  FP_TYPE* xhe = moving_avg(xh + filtord / 2, nx, mavgord);
+  free(xh);
+  
   // CB5
   FP_TYPE** env_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
   FP_TYPE** env_phasegram   = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
-  spectrogram_analyze(param, xh + filtord / 2, nx, fs, f0, nf0, nfft, fftbuff, "blackman_harris",
-    env_spectrogram, env_phasegram, NULL);
-  free(xh);
+  model -> emin = calloc(nf0, sizeof(FP_TYPE));
+  spectrogram_analyze(param, xhe + mavgord / 2, nx, fs, f0, nf0, nfft, fftbuff, "blackman_harris",
+    env_spectrogram, env_phasegram, NULL, model -> emin);
+  free(xhe);
   
   // CB6
   model -> eenv -> freq = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
@@ -545,7 +588,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   *ny = nfrm * nhop + nfft;
   FP_TYPE* y_sin = calloc(*ny, sizeof(FP_TYPE));
   FP_TYPE* y_env = calloc(*ny, sizeof(FP_TYPE));
-  FP_TYPE* y_env_positive = calloc(*ny, sizeof(FP_TYPE));
+  FP_TYPE* y_env_mix = calloc(*ny, sizeof(FP_TYPE));
   
   // D1
   FP_TYPE** sin_phse = (FP_TYPE**)copy2d(model -> sinu -> phse, nfrm, model -> conf.nhar , sizeof(FP_TYPE));
@@ -597,32 +640,30 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   free(h_low);
   
   // DA3, D4
+  subtract_minimum_envelope(y_env, *ny, model -> f0, nhop, nfrm, fs);
+
   FP_TYPE* y_high_normalized = calloc(*ny, sizeof(FP_TYPE));
   for(int i = 0; i < nfrm; i ++) {
     FP_TYPE* hfrm = fetch_frame(y_high + filtord / 2, *ny, i * nhop, nhop * 2);
     FP_TYPE* efrm = fetch_frame(y_env, *ny, i * nhop, nhop * 2);
     FP_TYPE havg = 0;
     for(int j = 0; j < nhop * 2; j ++)
-      havg += fabs(hfrm[j]);
+      havg += hfrm[j] * hfrm[j];
     havg /= nhop * 2;
     for(int j = 0; j < nhop * 2; j ++)
-      hfrm[j] *= 1.0 / (havg + EPS);
+      hfrm[j] *= sqrt(1.0 / (havg + EPS));
 
-    if(model -> f0[i] > 0.0) {
-      FP_TYPE emin = 0;
-      for(int j = 0; j < nhop * 2; j ++)
-        if(efrm[j] < emin)
-          emin = efrm[j];
-      for(int j = 0; j < nhop * 2; j ++)
-        efrm[j] -= emin;
-    } else
+    if(model -> f0[i] <= 0.0)
       for(int j = 0; j < nhop * 2; j ++)
         efrm[j] = havg;
+    else
+      for(int j = 0; j < nhop * 2; j ++)
+        efrm[j] += model -> emin[i];
 
     for(int j = 0; j < nhop * 2; j ++)
       if(i * nhop + j - nhop > 0) {
         y_high_normalized[i * nhop + j - nhop] += hfrm[j] * ola_window[j];
-        y_env_positive   [i * nhop + j - nhop] += efrm[j] * ola_window[j];
+        y_env_mix        [i * nhop + j - nhop] += efrm[j] * ola_window[j];
       }
 
     free(hfrm);
@@ -630,16 +671,15 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   }
   free(ola_window);
   free(y_high);
-  free(y_env);
-  
+
   // DB1, DB2
   for(int i = 0; i < *ny - nfft; i ++)
-  //  y_sin[i] = y_nos[i];
-    y_sin[i] += y_low[i + filtord / 2] + y_high_normalized[i] * y_env_positive[i];
-  free(y_env_positive);
+    y_sin[i] += y_low[i + filtord / 2] + y_high_normalized[i] * sqrt(fabs(y_env_mix[i]));
+  free(y_env_mix);
   free(y_high_normalized);
   free(y_nos);
   free(y_low);
+  free(y_env);
   
   return y_sin;
 }

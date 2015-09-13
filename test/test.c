@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
   double* f0 = pyin_analyze(param, x, nx, fs, & nfrm);
 
   llsm_parameters lparam = llsm_init();
-  lparam.a_mvf = 8000;
+  lparam.a_mvf = 11000;
   lparam.a_nhop = pow(2, ceil(log2(fs * 0.005)));
   llsm* model = llsm_analyze(lparam, x, nx, fs, f0, nfrm);
 

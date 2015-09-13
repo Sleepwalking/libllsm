@@ -74,8 +74,9 @@ typedef struct {
 */
 typedef struct {
   llsm_sinparam* sinu;  // sinusoidal parameters
-  llsm_sinparam* eenv;  // sinusoidal parameters for noise envergy
+  llsm_sinparam* eenv;  // sinusoidal parameters for turbulent noise energy
   FP_TYPE** noise;      // wrapped noise spectrogram
+  FP_TYPE* emin;       // mean turbulent noise energy
   FP_TYPE* f0;          // fundamental frequency (Hz)
   llsm_conf conf;       // configuration
 } llsm;

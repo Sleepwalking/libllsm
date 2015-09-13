@@ -221,5 +221,13 @@ inline FP_TYPE* white_noise(FP_TYPE amplitude, int n) {
   return y;
 }
 
+inline FP_TYPE* moving_avg(FP_TYPE* x, int nx, int order) {
+  FP_TYPE* h = boxcar(order);
+  for(int i = 0; i < order; i ++) h[i] /= order;
+  FP_TYPE* y = conv(x, h, nx, order);
+  free(h);
+  return y;
+}
+
 #endif
 

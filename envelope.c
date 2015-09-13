@@ -141,3 +141,25 @@ FP_TYPE* llsm_spectrum_from_envelope(FP_TYPE* freq, FP_TYPE* magn, int nf, int n
   return y;
 }
 
+FP_TYPE* llsm_nonuniform_envelope(FP_TYPE* x, int nx, int* instant, int* winlen, int ni, int mode) {
+  FP_TYPE* env = calloc(ni, sizeof(FP_TYPE));
+  for(int i = 0; i < ni; i ++) {
+    int t = instant[i];
+    int l = winlen[i];
+    env[i] = x[t];
+    if(mode == 0)
+      for(int j = 0; j < l; j ++) {
+        int idx = t - l / 2 + j;
+        if(idx >= 0 && idx < nx)
+          env[i] = min(env[i], x[idx]);
+      }
+    else
+      for(int j = 0; j < l; j ++) {
+        int idx = t - l / 2 + j;
+        if(idx >= 0 && idx < nx)
+          env[i] = max(env[i], x[idx]);
+      }
+  }
+  return env;
+}
+

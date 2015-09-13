@@ -48,10 +48,13 @@ FP_TYPE* llsm_true_envelope(FP_TYPE* spectrum, int ns, int order, int niter);
   llsm_geometric_envelope: obtain a geometric (piecewise linear) representation of spectrum by taking maximum
     values around freq
   llsm_spectrum_from_envelope: interpolate a piecewise linear function to generate a spectral envelope
+  llsm_nonuniform_envelope: obtain a geometric representation of any signal by taking local maximum/minimum
+    around nonuniformly sampled time instants; mode: 0 - minimum, 1 - maximum
 */
 FP_TYPE* llsm_wrap_freq(FP_TYPE fmin, FP_TYPE fmax, int n, FP_TYPE wrap_const);
 FP_TYPE* llsm_geometric_envelope(FP_TYPE* spectrum, int ns, int fs, FP_TYPE* freq, int nf);
 FP_TYPE* llsm_spectrum_from_envelope(FP_TYPE* freq, FP_TYPE* magn, int nf, int ns, int fs);
+FP_TYPE* llsm_nonuniform_envelope(FP_TYPE* x, int nx, int* instant, int* winlen, int ni, int mode);
 
 #endif
 
