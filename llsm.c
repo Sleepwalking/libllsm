@@ -529,7 +529,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   model -> nosch = calloc(param.a_nnosband, sizeof(llsm_echannel*));
   for(int b = 0; b < param.a_nnosband; b ++) {
     model -> nosch[b] = malloc(sizeof(llsm_echannel));
-    // CB2
+    // CC2
     const int filtord = 60;
     FP_TYPE* h = NULL;
     FP_TYPE favg = 0;
@@ -548,14 +548,14 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
     FP_TYPE* b_filtered = conv(resynth, h, nx, filtord);
     free(h);
     
-    // CB3
+    // CC3
     for(int i = 0; i < nx + filtord - 1; i ++)
       b_filtered[i] = b_filtered[i] * b_filtered[i];
     int mavgord = round(fs / favg * 2);
     FP_TYPE* b_env = moving_avg(b_filtered + filtord / 2, nx, mavgord);
     free(b_filtered);
     
-    // CB5
+    // CC5
     FP_TYPE** b_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
     FP_TYPE** b_phasegram   = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
     model -> nosch[b] -> emin = calloc(nf0, sizeof(FP_TYPE));
@@ -563,7 +563,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
       b_spectrogram, b_phasegram, NULL, model -> nosch[b] -> emin);
     free(b_env);
     
-    // CB6
+    // CC6
     model -> nosch[b] -> eenv = malloc(sizeof(llsm_sinparam));
     llsm_sinparam* b_eenv = model -> nosch[b] -> eenv;
     b_eenv -> nfrm = nf0;
@@ -641,7 +641,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
       sin_phse[i][j] = sin_phse[i][0] / f0 * model -> sinu -> freq[i][j] + model -> sinu -> phse[i][j];
   }
   
-  // D2, D3
+  // D2
   FP_TYPE* ola_window = hanning(nhop * 2);
   for(int i = 0; i < nfrm; i ++) {
     int tn = i * nhop;
@@ -656,7 +656,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     free(sin_frame);
   }
   
-  // DA1
+  // DC1
   FP_TYPE* s = white_noise(1.0, *ny);
   FP_TYPE* noise_excitation = calloc(*ny, sizeof(FP_TYPE));
 
@@ -666,6 +666,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     FP_TYPE* b_env = calloc(*ny, sizeof(FP_TYPE));
     FP_TYPE* b_env_mix = calloc(*ny, sizeof(FP_TYPE));
     
+    // D1
     FP_TYPE** b_phse = (FP_TYPE**)copy2d(b_channel -> eenv -> phse, nfrm, model -> conf.nhare, sizeof(FP_TYPE));
     for(int i = 0; i < nfrm; i ++) {
       FP_TYPE f0 = model -> sinu -> freq[i][0];
@@ -673,6 +674,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
         b_phse[i][j] = sin_phse[i][0] / f0 * b_channel -> eenv -> freq[i][j] + b_channel -> eenv -> phse[i][j];
     }
     
+    // D3
     for(int i = 0; i < nfrm; i ++) {
       int tn = i * nhop;
       if(model -> f0[i] <= 0.0) continue;
@@ -686,7 +688,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     }
     free2d(b_phse, nfrm);
 
-    // DA2
+    // DC2
     const int filtord = 60;
     FP_TYPE* h = NULL;
     if(b == 0)
@@ -700,7 +702,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     FP_TYPE* b_filtered = conv(s, h, *ny, filtord);
     free(h);
     
-    // DA3, D4
+    // DC3
     subtract_minimum_envelope(b_env, *ny, model -> f0, nhop, nfrm, fs);
 
     FP_TYPE* b_normalized = calloc(*ny, sizeof(FP_TYPE));
@@ -732,7 +734,8 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     }
     for(int i = 0; i < *ny; i ++)
       b_env_mix[i] = sqrt(max(0, b_env_mix[i]));
-
+    
+    // DC4
     for(int i = 0; i < *ny; i ++)
       noise_excitation[i] += b_normalized[i] * b_env_mix[i];
     
@@ -744,8 +747,11 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   free2d(sin_phse, nfrm);
   free(s);
 
+  // DC5
   FP_TYPE* y_nos = filter_noise(param, model -> conf, noise_excitation, *ny, model -> noise, 1);
   free(noise_excitation);
+  
+  // DB2
   for(int i = 0; i < *ny; i ++)
     y_sin[i] += y_nos[i];
   free(y_nos);
