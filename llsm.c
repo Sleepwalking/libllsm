@@ -312,7 +312,8 @@ static FP_TYPE* synth_sinusoid_frame(FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse
   return x;
 }
 
-static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wrapped_spectrogram, int winsize) {
+static FP_TYPE* filter_noise(llsm_parameters param, llsm_conf conf, FP_TYPE* x, int nx,
+  FP_TYPE** wrapped_spectrogram, int winsize) {
 /*
   To suppress glitches caused by aliasing, we apply MLT sine window twice, before analysis and after synthesis respectively;
   Overlapping factor should be greater or equal to 4 for MLT sine window;
@@ -339,12 +340,11 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
   for(int j = 0; j < nfft; j ++)
     w[j] = sqrt(w[j]);
   
-  FP_TYPE* x = white_noise(1.0, ny);
   FP_TYPE* freqwrap = llsm_wrap_freq(0, conf.nosf, conf.nnos, conf.noswrap);
   for(int i = 0; i < conf.nfrm * 2; i ++) {
     int t = i * conf.nhop;
     FP_TYPE* spec = llsm_spectrum_from_envelope(freqwrap, wrapped_spectrogram[i / 2], conf.nnos, nfft / 2, param.s_fs);
-    FP_TYPE* xfrm = fetch_frame(x, ny, t, nfft);
+    FP_TYPE* xfrm = fetch_frame(x, nx, t, nfft);
     for(int j = 0; j < nfft; j ++)
       xfrm[j] *= w[j];
     fft(xfrm, NULL, realbuff, imagbuff, nfft, fftbuff);
@@ -367,7 +367,6 @@ static FP_TYPE* synth_noise(llsm_parameters param, llsm_conf conf, FP_TYPE** wra
   }
   
   free(w);
-  free(x);
   free(yfrm);
   free(realbuff);
   free(imagbuff);
@@ -552,7 +551,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
     // CB3
     for(int i = 0; i < nx + filtord - 1; i ++)
       b_filtered[i] = b_filtered[i] * b_filtered[i];
-    int mavgord = round(fs / favg * 5);
+    int mavgord = round(fs / favg * 2);
     FP_TYPE* b_env = moving_avg(b_filtered + filtord / 2, nx, mavgord);
     free(b_filtered);
     
@@ -658,7 +657,8 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   }
   
   // DA1
-  FP_TYPE* y_nos = synth_noise(param, model -> conf, model -> noise, 1);
+  FP_TYPE* s = white_noise(1.0, *ny);
+  FP_TYPE* noise_excitation = calloc(*ny, sizeof(FP_TYPE));
 
   // for each noise channel
   for(int b = 0; b < model -> conf.nnosband; b ++) {
@@ -697,7 +697,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     else
       h = fir1bp(filtord, model -> conf.nosbandf[b - 1] / fs * 2.0,
         model -> conf.nosbandf[b] / fs * 2.0, "hanning");
-    FP_TYPE* b_filtered = conv(y_nos, h, *ny, filtord);
+    FP_TYPE* b_filtered = conv(s, h, *ny, filtord);
     free(h);
     
     // DA3, D4
@@ -730,9 +730,11 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
       free(hfrm);
       free(efrm);
     }
-   
     for(int i = 0; i < *ny; i ++)
-      y_sin[i] += b_normalized[i] * sqrt(fabs(b_env_mix[i]));
+      b_env_mix[i] = sqrt(max(0, b_env_mix[i]));
+
+    for(int i = 0; i < *ny; i ++)
+      noise_excitation[i] += b_normalized[i] * b_env_mix[i];
     
     free(b_filtered);
     free(b_normalized);
@@ -740,6 +742,12 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     free(b_env);
   }
   free2d(sin_phse, nfrm);
+  free(s);
+
+  FP_TYPE* y_nos = filter_noise(param, model -> conf, noise_excitation, *ny, model -> noise, 1);
+  free(noise_excitation);
+  for(int i = 0; i < *ny; i ++)
+    y_sin[i] += y_nos[i];
   free(y_nos);
 
   free(ola_window);
