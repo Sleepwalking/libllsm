@@ -95,7 +95,7 @@ inline FP_TYPE* blackman_harris(int n) {
 void cdft(int n, int isgn, FP_TYPE* a);
 void rdft(int n, int isgn, FP_TYPE* a);
 void llsm_idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n);
-FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, char* type, char* window);
+FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, FP_TYPE cutoff2, char* type, char* window);
 FP_TYPE* llsm_convolution(FP_TYPE* x, FP_TYPE* h, int nx, int nh);
 FP_TYPE* llsm_interp(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx);
 
@@ -203,7 +203,11 @@ inline void complete_asymm(FP_TYPE* x, int n) {
 }
 
 inline FP_TYPE* fir1(int order, FP_TYPE cutoff, char* type, char* window) {
-  return llsm_winfir(order, cutoff / 2.0, type, window);
+  return llsm_winfir(order, cutoff / 2.0, 0, type, window);
+}
+
+inline FP_TYPE* fir1bp(int order, FP_TYPE cutoff_low, FP_TYPE cutoff_high, char* window) {
+  return llsm_winfir(order, cutoff_low / 2.0, cutoff_high / 2.0, "bandpass", window);
 }
 
 inline FP_TYPE* conv(FP_TYPE* x, FP_TYPE* h, int nx, int nh) {

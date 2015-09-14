@@ -37,7 +37,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include "math-funcs.h"
 #include "envelope.h"
 
-llsm_parameters llsm_init() {
+llsm_parameters llsm_init(int nnosband) {
   llsm_parameters ret;
   ret.a_nhop = 256;
   ret.a_nhar = 80;
@@ -47,8 +47,17 @@ llsm_parameters llsm_init() {
   ret.a_rwin = 2.5;
   ret.a_mvf = 8000.0;
   ret.a_noswrap = 5000.0;
+  ret.a_nnosband = nnosband;
+  ret.a_nosbandf = calloc(nnosband - 1, sizeof(FP_TYPE));
+  ret.a_nosbandf[0] = 2000;
+  for(int i = 1; i < nnosband - 1; i ++) ret.a_nosbandf[i] = ret.a_nosbandf[i - 1] * 2.0;
   ret.s_fs = 0;
   return ret;
+}
+
+void llsm_deinit(llsm_parameters dst) {
+  if(dst.a_nosbandf != NULL)
+    free(dst.a_nosbandf);
 }
 
 static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nf0,
@@ -406,24 +415,29 @@ static void subtract_minimum_envelope(FP_TYPE* x, int nx, FP_TYPE* f0, int nhop,
 void llsm_delete(llsm* model) {
   if(model == NULL) return;
   int nfrm = model -> conf.nfrm;
+  if(model -> conf.nosbandf != NULL) free(model -> conf.nosbandf);
+  free(model -> f0);
   free2d(model -> noise, nfrm);
   free2d(model -> sinu -> freq, nfrm);
   free2d(model -> sinu -> ampl, nfrm);
   free2d(model -> sinu -> phse, nfrm);
-  free2d(model -> eenv -> freq, nfrm);
-  free2d(model -> eenv -> ampl, nfrm);
-  free2d(model -> eenv -> phse, nfrm);
   free(model -> sinu);
-  free(model -> eenv);
-  if(model -> emin != NULL) free(model -> emin);
-  free(model -> f0);
+
+  for(int i = 0; i < model -> conf.nnosband; i ++) {
+    free2d(model -> nosch[i] -> eenv -> freq, nfrm);
+    free2d(model -> nosch[i] -> eenv -> ampl, nfrm);
+    free2d(model -> nosch[i] -> eenv -> phse, nfrm);
+    free(model -> nosch[i] -> eenv);
+    if(model -> nosch[i] -> emin != NULL) free(model -> nosch[i] -> emin);
+    free(model -> nosch[i]);
+  }
+  free(model -> nosch);
   free(model);
 }
 
 llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nf0) {
   llsm* model = malloc(sizeof(llsm));
   model -> sinu = malloc(sizeof(llsm_sinparam));
-  model -> eenv = malloc(sizeof(llsm_sinparam));
   int nfft = pow(2, ceil(log2(fs * param.a_tfft)));
   FP_TYPE fftbuff[65536];
 
@@ -487,7 +501,6 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   model -> noise = (FP_TYPE**)calloc(nf0, sizeof(FP_TYPE*));
   spectrogram_analyze(param, resynth, nx, fs, f0, nf0, nfft, fftbuff, "hanning",
     noise_spectrogram, NULL, NULL, NULL);
-  free(resynth);
   
   FP_TYPE* freqwrap = llsm_wrap_freq(0, fs / 2, param.a_nnos, param.a_noswrap);
   for(int t = 0; t < nf0; t ++) {
@@ -510,44 +523,55 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   free(freqwrap);
   free2d(noise_spectrogram, nf0);
 
-  // CB2
-  const int filtord = 60;
-  FP_TYPE* h  = fir1(filtord, param.a_mvf / fs * 2.0, "highpass", "hanning");
-  FP_TYPE* xh = conv(x, h, nx, filtord);
-  free(h);
-  
-  // CB3
-  for(int i = 0; i < nx + filtord - 1; i ++)
-    xh[i] = xh[i] * xh[i];
-  int mavgord = round(fs / param.a_mvf * 5);
-  FP_TYPE* xhe = moving_avg(xh + filtord / 2, nx, mavgord);
-  free(xh);
-  
-  // CB5
-  FP_TYPE** env_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
-  FP_TYPE** env_phasegram   = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
-  model -> emin = calloc(nf0, sizeof(FP_TYPE));
-  spectrogram_analyze(param, xhe + mavgord / 2, nx, fs, f0, nf0, nfft, fftbuff, "blackman_harris",
-    env_spectrogram, env_phasegram, NULL, model -> emin);
-  free(xhe);
-  
-  // CB6
-  model -> eenv -> freq = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
-  model -> eenv -> ampl = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
-  model -> eenv -> phse = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
-  for(int i = 0; i < param.a_nhare; i ++) {
-    find_harmonic_trajectory(param, env_spectrogram, env_phasegram, nfft, fs, rf0, nf0, i + 1, tmpfreq, tmpampl, tmpphse);
-    for(int j = 0; j < nf0; j ++) {
-      model -> eenv -> freq[j][i] = tmpfreq[j];
-      model -> eenv -> ampl[j][i] = tmpampl[j];
-      model -> eenv -> phse[j][i] = tmpphse[j];
+  // for each noise band
+  model -> nosch = calloc(param.a_nnosband, sizeof(llsm_echannel*));
+  for(int b = 0; b < param.a_nnosband; b ++) {
+    model -> nosch[b] = malloc(sizeof(llsm_echannel));
+    // CB2
+    const int filtord = 60;
+    FP_TYPE* h  = fir1bp(filtord, b == 0 ? 0.0 : param.a_nosbandf[b - 1] / fs * 2.0,
+      b == param.a_nnosband - 1 ? 1.0 : param.a_nosbandf[b] / fs * 2.0, "hamming");
+    FP_TYPE* b_filtered = conv(resynth, h, nx, filtord);
+    free(h);
+    
+    // CB3
+    for(int i = 0; i < nx + filtord - 1; i ++)
+      b_filtered[i] = b_filtered[i] * b_filtered[i];
+    int mavgord = round(fs / param.a_mvf * 5);
+    FP_TYPE* b_env = moving_avg(b_filtered + filtord / 2, nx, mavgord);
+    free(b_filtered);
+    
+    // CB5
+    FP_TYPE** b_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
+    FP_TYPE** b_phasegram   = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
+    model -> nosch[b] -> emin = calloc(nf0, sizeof(FP_TYPE));
+    spectrogram_analyze(param, b_env + mavgord / 2, nx, fs, f0, nf0, nfft, fftbuff, "blackman_harris",
+      b_spectrogram, b_phasegram, NULL, model -> nosch[b] -> emin);
+    free(b_env);
+    
+    // CB6
+    model -> nosch[b] -> eenv = malloc(sizeof(llsm_sinparam));
+    llsm_sinparam* b_eenv = model -> nosch[b] -> eenv;
+    b_eenv -> nfrm = nf0;
+    b_eenv -> nhar = param.a_nhare;
+    b_eenv -> freq = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
+    b_eenv -> ampl = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
+    b_eenv -> phse = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
+    for(int i = 0; i < param.a_nhare; i ++) {
+      find_harmonic_trajectory(param, b_spectrogram, b_phasegram, nfft, fs, rf0, nf0, i + 1, tmpfreq, tmpampl, tmpphse);
+      for(int j = 0; j < nf0; j ++) {
+        b_eenv -> freq[j][i] = tmpfreq[j];
+        b_eenv -> ampl[j][i] = tmpampl[j];
+        b_eenv -> phse[j][i] = tmpphse[j];
+      }
     }
+    free2d(b_spectrogram, nf0);
+    free2d(b_phasegram, nf0);
   }
+  free(resynth);
   free(tmpfreq);
   free(tmpampl);
   free(tmpphse);
-  free2d(env_spectrogram, nf0);
-  free2d(env_phasegram, nf0);
   
   // CB8
   for(int i = 0; i < nf0; i ++) {
@@ -557,16 +581,16 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
       model -> sinu -> phse[i][j] -= base * model -> sinu -> freq[i][j] / rf0[i];
       model -> sinu -> phse[i][j] = fmod(model -> sinu -> phse[i][j], M_PI * 2.0);
     }
-    for(int j = 0; j < param.a_nhare; j ++) {
-      model -> eenv -> phse[i][j] -= base * model -> eenv -> freq[i][j] / rf0[i];
-      model -> eenv -> phse[i][j] = fmod(model -> eenv -> phse[i][j], M_PI * 2.0);
-    }
+    for(int b = 0; b < param.a_nnosband; b ++)
+      for(int j = 0; j < param.a_nhare; j ++) {
+        model -> nosch[b] -> eenv -> phse[i][j] -= base * model -> nosch[b] -> eenv -> freq[i][j] / rf0[i];
+        model -> nosch[b] -> eenv -> phse[i][j] = fmod(model -> nosch[b] -> eenv -> phse[i][j], M_PI * 2.0);
+      }
   }
   
   model -> sinu -> nfrm = nf0;
-  model -> eenv -> nfrm = nf0;
-  model -> sinu -> nhar = param.a_nhar;
-  model -> eenv -> nhar = param.a_nhare;
+  model -> eenv = model -> nosch[param.a_nnosband - 1] -> eenv;
+  model -> emin = model -> nosch[param.a_nnosband - 1] -> emin;
   model -> conf.nfrm = nf0;
   model -> conf.nhop = param.a_nhop;
   model -> conf.nhar = param.a_nhar;
@@ -575,6 +599,10 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   model -> conf.nosf = fs / 2.0;
   model -> conf.mvf = param.a_mvf;
   model -> conf.noswrap = param.a_noswrap;
+  model -> conf.nosbandf = calloc(param.a_nnosband, sizeof(FP_TYPE));
+  model -> conf.nnosband = param.a_nnosband;
+  for(int i = 0; i < param.a_nnosband; i ++)
+    model -> conf.nosbandf[i] = param.a_nosbandf[i];
 
   return model;
 }

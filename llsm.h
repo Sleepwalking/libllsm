@@ -56,6 +56,14 @@ typedef struct {
 } llsm_sinparam;
 
 /*
+  llsm_echannel: model parameters for each noise energy channel
+*/
+typedef struct {
+  llsm_sinparam* eenv;  // sinusoidal parameters for noise energy envelope
+  FP_TYPE* emin;        // minimum noise energy  
+} llsm_echannel;
+
+/*
   llsm_conf: model configurations
 */
 typedef struct {
@@ -64,21 +72,27 @@ typedef struct {
   int nhar;             // number of harmonics
   int nhare;            // number of harmonics for noise energy
   int nnos;             // size of noise spectrum
+  FP_TYPE noswrap;      // wrapping factor for noise spectrum
   FP_TYPE mvf;          // maximum voiced frequency
   FP_TYPE nosf;         // upper bound of noise frequency
-  FP_TYPE noswrap;      // wrapping factor for noise spectrum
+  
+  FP_TYPE* nosbandf;    // upper frequency of each noise band, excluding nosf; example: [2000, 4000, 8000]
+  int nnosband;         // number of noise bands
 } llsm_conf;
 
 /*
   llsm: Low Level Speech Model paramters
 */
 typedef struct {
-  llsm_sinparam* sinu;  // sinusoidal parameters
-  llsm_sinparam* eenv;  // sinusoidal parameters for turbulent noise energy
-  FP_TYPE** noise;      // wrapped noise spectrogram
-  FP_TYPE* emin;       // mean turbulent noise energy
-  FP_TYPE* f0;          // fundamental frequency (Hz)
   llsm_conf conf;       // configuration
+  FP_TYPE* f0;          // fundamental frequency (Hz)
+
+  llsm_sinparam* sinu;  // sinusoidal parameters
+  FP_TYPE** noise;      // wrapped noise spectrogram
+
+  llsm_echannel** nosch; // noise energy channels
+  llsm_sinparam* eenv;  // sinusoidal parameters for noise energy envelope
+  FP_TYPE* emin;        // minimum noise energy
 } llsm;
 
 /*
@@ -99,6 +113,8 @@ typedef struct {
   FP_TYPE a_tfft;       // size of transformation in seconds
   FP_TYPE a_rwin;       // ratio of analysis window length to period
   FP_TYPE a_mvf;        // maximum voiced frequency
+  FP_TYPE* a_nosbandf;  // upper frequency of each noise band
+  int a_nnosband;       // number of noise bands
 
   // params for synthesis
   int s_fs;             // sampling frequency
@@ -107,7 +123,8 @@ typedef struct {
 /*
   llsm_init: obtain a configuration set initialized with default values
 */
-llsm_parameters llsm_init();
+llsm_parameters llsm_init(int nnosband);
+void llsm_deinit(llsm_parameters dst);
 
 /*
   llsm_analyze

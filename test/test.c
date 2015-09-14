@@ -35,6 +35,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include <math.h>
 #include "../external/matlabfunctions.h"
 #include "../external/libpyin/pyin.h"
+#include "../math-funcs.h"
 #include "../llsm.h"
 
 double get_time() {
@@ -64,13 +65,15 @@ int main(int argc, char** argv) {
   int nfrm = 0;
   double* f0 = pyin_analyze(param, x, nx, fs, & nfrm);
 
-  llsm_parameters lparam = llsm_init();
+  llsm_parameters lparam = llsm_init(4);
   lparam.a_mvf = 11000;
   lparam.a_nhop = pow(2, ceil(log2(fs * 0.005)));
+  printf("Analyzing...\n");
   llsm* model = llsm_analyze(lparam, x, nx, fs, f0, nfrm);
 
   lparam.s_fs = fs;
   
+  printf("Synthesizing...\n");
   double t0 = get_time();
   int ny;
   double* y = llsm_synthesize(lparam, model, & ny);

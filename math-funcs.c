@@ -65,8 +65,9 @@ void llsm_idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n) {
   }
 }
 
-FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, char* type, char* window) {
-  FP_TYPE cutk = cutoff * order;
+FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, FP_TYPE cutoff2, char* type, char* window) {
+  FP_TYPE cutk  = cutoff  * order;
+  FP_TYPE cutk2 = cutoff2 * order;
   FP_TYPE* freqrsp = calloc(order, sizeof(FP_TYPE));
   FP_TYPE* timersp = calloc(order, sizeof(FP_TYPE));
 
@@ -81,12 +82,18 @@ FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, char* type, char* window) {
   if(! strcmp(type, "lowpass")) {
     for(int i = 0; i <= floor(cutk); i ++)
       freqrsp[i] = 1;
-    freqrsp[(int)ceil(cutk) + 1] = fmod(cutk, 1.0);
+    freqrsp[(int)ceil(cutk)] = fmod(cutk, 1.0);
   } else
   if(! strcmp(type, "highpass")) {
     for(int i = order / 2; i > floor(cutk); i --)
       freqrsp[i] = 1;
     freqrsp[(int)floor(cutk)] = 1.0 - fmod(cutk, 1.0);
+  }
+  if(! strcmp(type, "bandpass")) {
+    for(int i = floor(cutk2); i > floor(cutk); i --)
+      freqrsp[i] = 1;
+    freqrsp[(int)floor(cutk)] = 1.0 - fmod(cutk, 1.0);    
+    freqrsp[(int)ceil(cutk2)] = fmod(cutk2, 1.0);
   }
   
   complete_symm(freqrsp, order);
