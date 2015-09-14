@@ -695,7 +695,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
       h = fir1(filtord, model -> conf.nosbandf[b] / fs * 2.0, "lowpass", "hanning");
     else
     if(b == model -> conf.nnosband - 1)
-      h = fir1(filtord, model -> conf.nosbandf[b - 1] / fs * 2.0, "highpass", "hanning");
+      h = fir1bp(filtord, model -> conf.nosbandf[b - 1] / fs * 2.0, model -> conf.nosf / fs * 2.0, "hanning");
     else
       h = fir1bp(filtord, model -> conf.nosbandf[b - 1] / fs * 2.0,
         model -> conf.nosbandf[b] / fs * 2.0, "hanning");
