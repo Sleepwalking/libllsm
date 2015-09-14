@@ -90,7 +90,7 @@ typedef struct {
   llsm_sinparam* sinu;  // sinusoidal parameters
   FP_TYPE** noise;      // wrapped noise spectrogram
 
-  llsm_echannel** nosch; // noise energy channels
+  llsm_echannel** nosch;// noise energy channels
   llsm_sinparam* eenv;  // sinusoidal parameters for noise energy envelope
   FP_TYPE* emin;        // minimum noise energy
 } llsm;
