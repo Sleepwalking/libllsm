@@ -493,15 +493,18 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   }
   free(resynth_window);
 
-  // C7 -> CB7
+  // C7
   for(int i = 0; i < nx; i ++)
     resynth[i] = x[i] - resynth[i];
+  //wavwrite(resynth, nx, fs, 16, "/tmp/noise.wav");
   
+  // C21
   FP_TYPE** noise_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
   model -> noise = (FP_TYPE**)calloc(nf0, sizeof(FP_TYPE*));
   spectrogram_analyze(param, resynth, nx, fs, f0, nf0, nfft, fftbuff, "hanning",
     noise_spectrogram, NULL, NULL, NULL);
   
+  // C22
   FP_TYPE* freqwrap = llsm_wrap_freq(0, fs / 2, param.a_nnos, param.a_noswrap);
   for(int t = 0; t < nf0; t ++) {
   /*
@@ -523,21 +526,33 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   free(freqwrap);
   free2d(noise_spectrogram, nf0);
 
-  // for each noise band
+  // for each noise channel
   model -> nosch = calloc(param.a_nnosband, sizeof(llsm_echannel*));
   for(int b = 0; b < param.a_nnosband; b ++) {
     model -> nosch[b] = malloc(sizeof(llsm_echannel));
     // CB2
     const int filtord = 60;
-    FP_TYPE* h  = fir1bp(filtord, b == 0 ? 0.0 : param.a_nosbandf[b - 1] / fs * 2.0,
-      b == param.a_nnosband - 1 ? 1.0 : param.a_nosbandf[b] / fs * 2.0, "hamming");
+    FP_TYPE* h = NULL;
+    FP_TYPE favg = 0;
+    if(b == 0) {
+      h = fir1(filtord, param.a_nosbandf[b] / fs * 2.0, "lowpass", "hanning");
+      favg = param.a_nosbandf[b] / 2.0;
+    } else
+    if(b == param.a_nnosband - 1) {
+      h = fir1(filtord, param.a_nosbandf[b - 1] / fs * 2.0, "highpass", "hanning");
+      favg = (param.a_nosbandf[b - 1] + fs) / 2.0;
+    } else {
+      h = fir1bp(filtord, param.a_nosbandf[b - 1] / fs * 2.0,
+        param.a_nosbandf[b] / fs * 2.0, "hanning");
+      favg = (param.a_nosbandf[b] + param.a_nosbandf[b - 1]) / 2.0;
+    }
     FP_TYPE* b_filtered = conv(resynth, h, nx, filtord);
     free(h);
     
     // CB3
     for(int i = 0; i < nx + filtord - 1; i ++)
       b_filtered[i] = b_filtered[i] * b_filtered[i];
-    int mavgord = round(fs / param.a_mvf * 5);
+    int mavgord = round(fs / favg * 5);
     FP_TYPE* b_env = moving_avg(b_filtered + filtord / 2, nx, mavgord);
     free(b_filtered);
     
@@ -573,7 +588,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   free(tmpampl);
   free(tmpphse);
   
-  // CB8
+  // C8
   for(int i = 0; i < nf0; i ++) {
     FP_TYPE base = model -> sinu -> phse[i][0];
     if(rf0[i] <= 0.0) continue;
@@ -599,9 +614,9 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   model -> conf.nosf = fs / 2.0;
   model -> conf.mvf = param.a_mvf;
   model -> conf.noswrap = param.a_noswrap;
-  model -> conf.nosbandf = calloc(param.a_nnosband, sizeof(FP_TYPE));
+  model -> conf.nosbandf = calloc(param.a_nnosband - 1, sizeof(FP_TYPE));
   model -> conf.nnosband = param.a_nnosband;
-  for(int i = 0; i < param.a_nnosband; i ++)
+  for(int i = 0; i < param.a_nnosband - 1; i ++)
     model -> conf.nosbandf[i] = param.a_nosbandf[i];
 
   return model;
@@ -615,12 +630,9 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   
   *ny = nfrm * nhop + nfft;
   FP_TYPE* y_sin = calloc(*ny, sizeof(FP_TYPE));
-  FP_TYPE* y_env = calloc(*ny, sizeof(FP_TYPE));
-  FP_TYPE* y_env_mix = calloc(*ny, sizeof(FP_TYPE));
   
   // D1
   FP_TYPE** sin_phse = (FP_TYPE**)copy2d(model -> sinu -> phse, nfrm, model -> conf.nhar , sizeof(FP_TYPE));
-  FP_TYPE** env_phse = (FP_TYPE**)copy2d(model -> eenv -> phse, nfrm, model -> conf.nhare, sizeof(FP_TYPE));
   FP_TYPE phse0 = 0;
   for(int i = 1; i < nfrm; i ++) {
     FP_TYPE f0 = model -> sinu -> freq[i][0];
@@ -628,8 +640,6 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     sin_phse[i][0] = fmod(phse0, 2.0 * M_PI) - M_PI;
     for(int j = 1; j < model -> conf.nhar; j ++)
       sin_phse[i][j] = sin_phse[i][0] / f0 * model -> sinu -> freq[i][j] + model -> sinu -> phse[i][j];
-    for(int j = 0; j < model -> conf.nhare; j ++)
-      env_phse[i][j] = sin_phse[i][0] / f0 * model -> eenv -> freq[i][j] + model -> eenv -> phse[i][j];
   }
   
   // D2, D3
@@ -641,74 +651,98 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     FP_TYPE* sin_frame = synth_sinusoid_frame(
       model -> sinu -> freq[i], model -> sinu -> ampl[i], sin_phse[i],
       model -> conf.nhar, fs, nhop * 2);
-    FP_TYPE* env_frame = synth_sinusoid_frame(
-      model -> eenv -> freq[i], model -> eenv -> ampl[i], env_phse[i],
-      model -> conf.nhare, fs, nhop * 2);
     for(int j = 0; j < nhop * 2; j ++)
-      if(tn + j - nhop > 0) {
+      if(tn + j - nhop > 0)
         y_sin[tn + j - nhop] += sin_frame[j] * ola_window[j];
-        y_env[tn + j - nhop] += env_frame[j] * ola_window[j];
-      }
     free(sin_frame);
-    free(env_frame);
   }
-  free2d(sin_phse, nfrm);
-  free2d(env_phse, nfrm);
   
   // DA1
   FP_TYPE* y_nos = synth_noise(param, model -> conf, model -> noise, 1);
-  
-  // DA2
-  const int filtord = 60;
-  FP_TYPE* h_high = fir1(filtord, model -> conf.mvf / fs * 2.0, "highpass", "hanning");
-  FP_TYPE* h_low  = fir1(filtord, model -> conf.mvf / fs * 2.0, "lowpass" , "hanning");
-  FP_TYPE* y_high = conv(y_nos, h_high, *ny, filtord);
-  FP_TYPE* y_low  = conv(y_nos, h_low , *ny, filtord);
-  free(h_high);
-  free(h_low);
-  
-  // DA3, D4
-  subtract_minimum_envelope(y_env, *ny, model -> f0, nhop, nfrm, fs);
 
-  FP_TYPE* y_high_normalized = calloc(*ny, sizeof(FP_TYPE));
-  for(int i = 0; i < nfrm; i ++) {
-    FP_TYPE* hfrm = fetch_frame(y_high + filtord / 2, *ny, i * nhop, nhop * 2);
-    FP_TYPE* efrm = fetch_frame(y_env, *ny, i * nhop, nhop * 2);
-    FP_TYPE havg = 0;
-    for(int j = 0; j < nhop * 2; j ++)
-      havg += hfrm[j] * hfrm[j];
-    havg /= nhop * 2;
-    for(int j = 0; j < nhop * 2; j ++)
-      hfrm[j] *= sqrt(1.0 / (havg + EPS));
-
-    if(model -> f0[i] <= 0.0)
+  // for each noise channel
+  for(int b = 0; b < model -> conf.nnosband; b ++) {
+    llsm_echannel* b_channel = model -> nosch[b];
+    FP_TYPE* b_env = calloc(*ny, sizeof(FP_TYPE));
+    FP_TYPE* b_env_mix = calloc(*ny, sizeof(FP_TYPE));
+    
+    FP_TYPE** b_phse = (FP_TYPE**)copy2d(b_channel -> eenv -> phse, nfrm, model -> conf.nhare, sizeof(FP_TYPE));
+    for(int i = 0; i < nfrm; i ++) {
+      FP_TYPE f0 = model -> sinu -> freq[i][0];
+      for(int j = 0; j < model -> conf.nhare; j ++)
+        b_phse[i][j] = sin_phse[i][0] / f0 * b_channel -> eenv -> freq[i][j] + b_channel -> eenv -> phse[i][j];
+    }
+    
+    for(int i = 0; i < nfrm; i ++) {
+      int tn = i * nhop;
+      if(model -> f0[i] <= 0.0) continue;
+      FP_TYPE* b_env_frame = synth_sinusoid_frame(
+        b_channel -> eenv -> freq[i], b_channel -> eenv -> ampl[i], b_phse[i],
+        model -> conf.nhare, fs, nhop * 2);
       for(int j = 0; j < nhop * 2; j ++)
-        efrm[j] = havg;
+        if(tn + j - nhop > 0)
+          b_env[tn + j - nhop] += b_env_frame[j] * ola_window[j];
+      free(b_env_frame);
+    }
+    free2d(b_phse, nfrm);
+
+    // DA2
+    const int filtord = 60;
+    FP_TYPE* h = NULL;
+    if(b == 0)
+      h = fir1(filtord, model -> conf.nosbandf[b] / fs * 2.0, "lowpass", "hanning");
     else
+    if(b == model -> conf.nnosband - 1)
+      h = fir1(filtord, model -> conf.nosbandf[b - 1] / fs * 2.0, "highpass", "hanning");
+    else
+      h = fir1bp(filtord, model -> conf.nosbandf[b - 1] / fs * 2.0,
+        model -> conf.nosbandf[b] / fs * 2.0, "hanning");
+    FP_TYPE* b_filtered = conv(y_nos, h, *ny, filtord);
+    free(h);
+    
+    // DA3, D4
+    subtract_minimum_envelope(b_env, *ny, model -> f0, nhop, nfrm, fs);
+
+    FP_TYPE* b_normalized = calloc(*ny, sizeof(FP_TYPE));
+    for(int i = 0; i < nfrm; i ++) {
+      FP_TYPE* hfrm = fetch_frame(b_filtered + filtord / 2, *ny, i * nhop, nhop * 2);
+      FP_TYPE* efrm = fetch_frame(b_env, *ny, i * nhop, nhop * 2);
+      FP_TYPE havg = 0;
       for(int j = 0; j < nhop * 2; j ++)
-        efrm[j] += model -> emin[i];
-
-    for(int j = 0; j < nhop * 2; j ++)
-      if(i * nhop + j - nhop > 0) {
-        y_high_normalized[i * nhop + j - nhop] += hfrm[j] * ola_window[j];
-        y_env_mix        [i * nhop + j - nhop] += efrm[j] * ola_window[j];
-      }
-
-    free(hfrm);
-    free(efrm);
+        havg += hfrm[j] * hfrm[j];
+      havg /= nhop * 2;
+      for(int j = 0; j < nhop * 2; j ++)
+        hfrm[j] *= sqrt(1.0 / (havg + EPS));
+      
+      if(model -> f0[i] <= 0.0)
+        for(int j = 0; j < nhop * 2; j ++)
+         efrm[j] = havg;
+      else
+        for(int j = 0; j < nhop * 2; j ++)
+          efrm[j] += b_channel -> emin[i];
+      
+      for(int j = 0; j < nhop * 2; j ++)
+        if(i * nhop + j - nhop > 0) {
+          b_normalized[i * nhop + j - nhop] += hfrm[j] * ola_window[j];
+          b_env_mix   [i * nhop + j - nhop] += efrm[j] * ola_window[j];
+        }
+      
+      free(hfrm);
+      free(efrm);
+    }
+   
+    for(int i = 0; i < *ny; i ++)
+      y_sin[i] += b_normalized[i] * sqrt(fabs(b_env_mix[i]));
+    
+    free(b_filtered);
+    free(b_normalized);
+    free(b_env_mix);
+    free(b_env);
   }
-  free(ola_window);
-  free(y_high);
-
-  // DB1, DB2
-  for(int i = 0; i < *ny - nfft; i ++)
-    y_sin[i] += y_low[i + filtord / 2] + y_high_normalized[i] * sqrt(fabs(y_env_mix[i]));
-  free(y_env_mix);
-  free(y_high_normalized);
+  free2d(sin_phse, nfrm);
   free(y_nos);
-  free(y_low);
-  free(y_env);
-  
+
+  free(ola_window);
   return y_sin;
 }
 
