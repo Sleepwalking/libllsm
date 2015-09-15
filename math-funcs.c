@@ -142,18 +142,18 @@ FP_TYPE* llsm_convolution(FP_TYPE* x, FP_TYPE* h, int nx, int nh) {
   return y;
 }
 
-static FP_TYPE* llsm_filter_order5(FP_TYPE* b, FP_TYPE* a, FP_TYPE* x, int nx) {
+static FP_TYPE* llsm_filter_order6(FP_TYPE* b, FP_TYPE* a, FP_TYPE* x, int nx) {
   FP_TYPE* y = calloc(nx + 4, sizeof(FP_TYPE));
   for(int i = 4; i < nx; i ++) {
-      y[i] -= a[1] * y[i - 1] + a[2] * y[i - 2] + a[3] * y[i - 3] + a[4] * y[i - 4];
-      y[i] += b[0] * x[i - 0] + b[1] * x[i - 1] + b[2] * x[i - 2] + b[3] * x[i - 3] + b[4] * x[i - 4];
+      y[i] -= a[1] * y[i - 1] + a[2] * y[i - 2] + a[3] * y[i - 3] + a[4] * y[i - 4] + a[5] * y[i - 5];
+      y[i] += b[0] * x[i - 0] + b[1] * x[i - 1] + b[2] * x[i - 2] + b[3] * x[i - 3] + b[4] * x[i - 4] + b[5] * x[i - 5];
   }
   return y;
 }
 
 FP_TYPE* llsm_filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx) {
-  if(na == 5 && nb == 5)
-    return llsm_filter_order5(b, a, x, nx);
+  if(na == 6 && nb == 6)
+    return llsm_filter_order6(b, a, x, nx);
 
   int nh = max(na, nb);
   FP_TYPE* y = calloc(nx + nh - 1, sizeof(FP_TYPE));
