@@ -530,26 +530,26 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   for(int b = 0; b < param.a_nnosband; b ++) {
     model -> nosch[b] = malloc(sizeof(llsm_echannel));
     // CC2
-    const int filtord = 60;
-    FP_TYPE* h = NULL;
+    int filtord = LLSM_CHEBY_ORDER * 2;
+    FP_TYPE* b_filtered = NULL;
     FP_TYPE favg = 0;
     if(b == 0) {
-      h = fir1(filtord, param.a_nosbandf[b] / fs * 2.0, "lowpass", "hanning");
+      b_filtered = chebyfilt(resynth, nx, param.a_nosbandf[b] / fs * 2.0, 0, "lowpass");
       favg = param.a_nosbandf[b] / 2.0;
+      filtord -= LLSM_CHEBY_ORDER;
     } else
     if(b == param.a_nnosband - 1) {
-      h = fir1(filtord, param.a_nosbandf[b - 1] / fs * 2.0, "highpass", "hanning");
+      b_filtered = chebyfilt(resynth, nx, param.a_nosbandf[b - 1] / fs * 2.0, 0, "highpass");
       favg = (param.a_nosbandf[b - 1] + fs) / 2.0;
+      filtord -= LLSM_CHEBY_ORDER;
     } else {
-      h = fir1bp(filtord, param.a_nosbandf[b - 1] / fs * 2.0,
-        param.a_nosbandf[b] / fs * 2.0, "hanning");
-      favg = (param.a_nosbandf[b] + param.a_nosbandf[b - 1]) / 2.0;
+      b_filtered = chebyfilt(resynth, nx, param.a_nosbandf[b - 1] / fs * 2.0,
+        param.a_nosbandf[b] / fs * 2.0, "bandpass");
+      favg = (param.a_nosbandf[b - 1] + param.a_nosbandf[b]) / 2.0;
     }
-    FP_TYPE* b_filtered = conv(resynth, h, nx, filtord);
-    free(h);
     
     // CC3
-    for(int i = 0; i < nx + filtord - 1; i ++)
+    for(int i = 0; i < nx + LLSM_CHEBY_ORDER - 1; i ++)
       b_filtered[i] = b_filtered[i] * b_filtered[i];
     int mavgord = round(fs / favg * 2);
     FP_TYPE* b_env = moving_avg(b_filtered + filtord / 2, nx, mavgord);
@@ -689,18 +689,18 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     free2d(b_phse, nfrm);
 
     // DC2
-    const int filtord = 60;
-    FP_TYPE* h = NULL;
-    if(b == 0)
-      h = fir1(filtord, model -> conf.nosbandf[b] / fs * 2.0, "lowpass", "hanning");
-    else
+    int filtord = LLSM_CHEBY_ORDER * 2;
+    FP_TYPE* b_filtered = NULL;
+    if(b == 0) {
+      b_filtered = chebyfilt(s, *ny, model -> conf.nosbandf[b] / fs * 2.0, 0, "lowpass");
+      filtord -= LLSM_CHEBY_ORDER;
+    } else
     if(b == model -> conf.nnosband - 1)
-      h = fir1bp(filtord, model -> conf.nosbandf[b - 1] / fs * 2.0, model -> conf.nosf / fs * 2.0, "hanning");
+      b_filtered = chebyfilt(s, *ny, model -> conf.nosbandf[b - 1] / fs * 2.0,
+        model -> conf.nosf / fs * 2.0, "bandpass");
     else
-      h = fir1bp(filtord, model -> conf.nosbandf[b - 1] / fs * 2.0,
-        model -> conf.nosbandf[b] / fs * 2.0, "hanning");
-    FP_TYPE* b_filtered = conv(s, h, *ny, filtord);
-    free(h);
+      b_filtered = chebyfilt(s, *ny, model -> conf.nosbandf[b - 1] / fs * 2.0,
+        model -> conf.nosbandf[b] / fs * 2.0, "bandpass");
     
     // DC3
     subtract_minimum_envelope(b_env, *ny, model -> f0, nhop, nfrm, fs);

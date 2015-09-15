@@ -54,7 +54,12 @@ int main(int argc, char** argv) {
   int nbit = 0;
   int nx = 0;
   double* x = wavread(argv[1], & fs, & nbit, & nx);
-
+  /*
+  // test if the chebyshev filter works
+  double* x1 = chebyfilt(x, nx, 7000.0 / fs * 2.0, 12000.0 / fs * 2.0, "bandpass");
+  wavwrite(x1, nx, fs, nbit, "/tmp/bp.wav");
+  free(x1);
+  */
   pyin_paramters param = pyin_init(pow(2, ceil(log2(fs * 0.005))));
   param.fmin = 50.0;
   param.fmax = 800.0;
@@ -86,6 +91,7 @@ int main(int argc, char** argv) {
   
   wavwrite(y, ny, lparam.s_fs, nbit, "resynth.wav");
 
+  llsm_deinit(lparam);
   llsm_delete(model);
   free(f0);
   free(x);

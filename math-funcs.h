@@ -29,11 +29,20 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 */
 
+/*
+  matlab-style frequency maps [0, 1] onto [0 fs/2] Hz
+  llsm-style frequency maps [0, 1] onto [0 fs] Hz even though (0.5, 1] is above nyquist frequency
+  
+  All inline functions are in matlab-style; all functions beginning with llsm prefix are llsm-style.
+*/
+
 #ifndef LLSM_MFUNCS
 #define LLSM_MFUNCS
 
 #include "common.h"
 #include <stdlib.h>
+
+#define LLSM_CHEBY_ORDER 6
 
 #define def_singlepass(name, op, init) \
 inline FP_TYPE name(FP_TYPE* src, int n) { \
@@ -96,7 +105,10 @@ void cdft(int n, int isgn, FP_TYPE* a);
 void rdft(int n, int isgn, FP_TYPE* a);
 void llsm_idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n);
 FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, FP_TYPE cutoff2, char* type, char* window);
+int llsm_get_iir_filter(FP_TYPE cutoff, char* type, FP_TYPE** a, FP_TYPE** b);
 FP_TYPE* llsm_convolution(FP_TYPE* x, FP_TYPE* h, int nx, int nh);
+FP_TYPE* llsm_filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx);
+FP_TYPE* llsm_chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, char* type);
 FP_TYPE* llsm_interp(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx);
 
 inline double fastatan2(double y, double x) {
@@ -210,8 +222,20 @@ inline FP_TYPE* fir1bp(int order, FP_TYPE cutoff_low, FP_TYPE cutoff_high, char*
   return llsm_winfir(order, cutoff_low / 2.0, cutoff_high / 2.0, "bandpass", window);
 }
 
+inline int cheby1_fixed(FP_TYPE cutoff, char* type, FP_TYPE** a, FP_TYPE** b) {
+  return llsm_get_iir_filter(cutoff / 2.0, type, a, b);
+}
+
 inline FP_TYPE* conv(FP_TYPE* x, FP_TYPE* h, int nx, int nh) {
   return llsm_convolution(x, h, nx, nh);
+}
+
+inline FP_TYPE* filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx) {
+  return llsm_filter(b, nb, a, na, x, nx);
+}
+
+inline FP_TYPE* chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, char* type) {
+  return llsm_chebyfilt(x, nx, cutoff1 / 2.0, cutoff2 / 2.0, type);
 }
 
 inline FP_TYPE* interp1(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx) {

@@ -32,6 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include "math-funcs.h"
 #include <math.h>
 #include <string.h>
+#include "filter-coef.h"
 
 void llsm_idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n) {
   FP_TYPE tpon = 2.0 * M_PI / n;
@@ -108,18 +109,75 @@ FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, FP_TYPE cutoff2, char* type, cha
   return h;
 }
 
+int llsm_get_iir_filter(FP_TYPE cutoff, char* type, FP_TYPE** a, FP_TYPE** b) {
+  int n = max(0, round(cutoff * 2.0 / step_freq - 1));
+  if(n >= filter_number) n = filter_number - 1;
+  int order = coef_size;
+  *a = calloc(order, sizeof(FP_TYPE));
+  *b = calloc(order, sizeof(FP_TYPE));
+  const FP_TYPE* a_line, *b_line;
+  if(! strcmp(type, "lowpass")) {
+    a_line = cheby_l_a + n * coef_size;
+    b_line = cheby_l_b + n * coef_size;
+  } else {
+    a_line = cheby_h_a + n * coef_size;
+    b_line = cheby_h_b + n * coef_size;
+  }
+  for(int i = 0; i < order; i ++) {
+    (*a)[i] = a_line[i];
+    (*b)[i] = b_line[i];
+  }
+  return order;
+}
+
 FP_TYPE* llsm_convolution(FP_TYPE* x, FP_TYPE* h, int nx, int nh) {
   FP_TYPE* xpad = calloc(nx + nh * 2 - 1, sizeof(FP_TYPE));
   FP_TYPE* y = calloc(nx + nh - 1, sizeof(FP_TYPE));
   for(int i = 0; i < nx; i ++)
     xpad[i + nh - 1] = x[i];
-  for(int i = 0; i < nx + nh - 1; i ++) {
-    FP_TYPE sum = 0;
+  for(int i = 0; i < nx + nh - 1; i ++)
     for(int k = 0; k < nh; k ++)
-      sum += h[k] * xpad[i + nh - 1 - k];
-    y[i] = sum;
-  }
+      y[i] += h[k] * xpad[i + nh - 1 - k];
   free(xpad);
+  return y;
+}
+
+static FP_TYPE* llsm_filter_order5(FP_TYPE* b, FP_TYPE* a, FP_TYPE* x, int nx) {
+  FP_TYPE* y = calloc(nx + 4, sizeof(FP_TYPE));
+  for(int i = 4; i < nx; i ++) {
+      y[i] -= a[1] * y[i - 1] + a[2] * y[i - 2] + a[3] * y[i - 3] + a[4] * y[i - 4];
+      y[i] += b[0] * x[i - 0] + b[1] * x[i - 1] + b[2] * x[i - 2] + b[3] * x[i - 3] + b[4] * x[i - 4];
+  }
+  return y;
+}
+
+FP_TYPE* llsm_filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx) {
+  if(na == 5 && nb == 5)
+    return llsm_filter_order5(b, a, x, nx);
+
+  int nh = max(na, nb);
+  FP_TYPE* y = calloc(nx + nh - 1, sizeof(FP_TYPE));
+  for(int i = na - 1; i < nx; i ++) {
+    for(int k = 1; k < na; k ++)
+      y[i] -= a[k] * y[i - k];
+    for(int k = 0; k < nb; k ++)
+      y[i] += b[k] * x[i - k];
+  }
+  return y;
+}
+
+FP_TYPE* llsm_chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, char* type) {
+  if(! strcmp(type, "bandpass")) {
+    FP_TYPE* x1 = llsm_chebyfilt(x , nx, cutoff1, 0, "highpass");
+    FP_TYPE* y  = llsm_chebyfilt(x1, nx, cutoff2, 0, "lowpass");
+    free(x1);
+    return y;
+  }
+  FP_TYPE* a, *b;
+  int order = llsm_get_iir_filter(cutoff1, type, &a, &b);
+  FP_TYPE* y = llsm_filter(b, order, a, order, x, nx);
+  free(a);
+  free(b);
   return y;
 }
 
