@@ -41,6 +41,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
 #include "common.h"
 #include <stdlib.h>
+#include "external/fastapprox/fasttrig.h"
+#include "external/fastapprox/fastexp.h"
+#include "external/fastapprox/fastlog.h"
 
 #define LLSM_CHEBY_ORDER 6
 

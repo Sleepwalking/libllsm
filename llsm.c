@@ -32,8 +32,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include "llsm.h"
 #include <stdlib.h>
 #include <string.h>
-#include "external/fastapprox/fasttrig.h"
-#include "external/fastapprox/fastexp.h"
 #include "math-funcs.h"
 #include "envelope.h"
 
@@ -411,6 +409,28 @@ static void subtract_minimum_envelope(FP_TYPE* x, int nx, FP_TYPE* f0, int nhop,
   free(env);
 }
 
+static FP_TYPE* stretch_static_noise(FP_TYPE* x, int nx, int ny, int novl) {
+  FP_TYPE* y = calloc(ny, sizeof(FP_TYPE));
+  for(int i = 0; i < min(nx, ny); i ++)
+    y[i] = x[i];
+  if(ny <= nx) return y;
+  
+  int top = nx;
+  while(1) {
+    for(int i = 0; i < novl; i ++) {
+      y[top - novl + i] *= 1.0 - (FP_TYPE)i / novl;
+      y[top - novl + i] += x[i] * (FP_TYPE)i / novl;
+    }
+    for(int i = 0; i < nx - novl; i ++) {
+      if(top + i >= ny) return y;
+      y[top + i] = x[i + novl];
+    }
+    top += nx - novl;
+  }
+  
+  return y;
+}
+
 void llsm_delete(llsm* model) {
   if(model == NULL) return;
   int nfrm = model -> conf.nfrm;
@@ -552,7 +572,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
     for(int i = 0; i < nx + LLSM_CHEBY_ORDER - 1; i ++)
       b_filtered[i] = b_filtered[i] * b_filtered[i];
     int mavgord = round(fs / favg * 2);
-    FP_TYPE* b_env = moving_avg(b_filtered + filtord / 2, nx, mavgord);
+    FP_TYPE* b_env = moving_avg(b_filtered + filtord / 2 - 1, nx, mavgord);
     free(b_filtered);
     
     // CC5
@@ -657,7 +677,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   }
   
   // DC1
-  FP_TYPE* s = white_noise(1.0, *ny);
+  FP_TYPE* s = white_noise(1.0, fs); // one-second-long noise template
   FP_TYPE* noise_excitation = calloc(*ny, sizeof(FP_TYPE));
 
   // for each noise channel
@@ -690,17 +710,20 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
 
     // DC2
     int filtord = LLSM_CHEBY_ORDER * 2;
+    FP_TYPE* b_template = NULL;
     FP_TYPE* b_filtered = NULL;
     if(b == 0) {
-      b_filtered = chebyfilt(s, *ny, model -> conf.nosbandf[b] / fs * 2.0, 0, "lowpass");
+      b_template = chebyfilt(s, fs, model -> conf.nosbandf[b] / fs * 2.0, 0, "lowpass");
       filtord -= LLSM_CHEBY_ORDER;
     } else
     if(b == model -> conf.nnosband - 1)
-      b_filtered = chebyfilt(s, *ny, model -> conf.nosbandf[b - 1] / fs * 2.0,
+      b_template = chebyfilt(s, fs, model -> conf.nosbandf[b - 1] / fs * 2.0,
         model -> conf.nosf / fs * 2.0, "bandpass");
     else
-      b_filtered = chebyfilt(s, *ny, model -> conf.nosbandf[b - 1] / fs * 2.0,
+      b_template = chebyfilt(s, fs, model -> conf.nosbandf[b - 1] / fs * 2.0,
         model -> conf.nosbandf[b] / fs * 2.0, "bandpass");
+    b_filtered = stretch_static_noise(b_template, fs, *ny, 256);
+    free(b_template);
     
     // DC3
     subtract_minimum_envelope(b_env, *ny, model -> f0, nhop, nfrm, fs);
