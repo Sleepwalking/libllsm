@@ -128,7 +128,7 @@ static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int f
     }
     
     for(int i = 0; i < nfft / 2; i ++) {
-      spectrogram[t][i] = log(spec_magn[i] * norm_factor);
+      spectrogram[t][i] = log_3(spec_magn[i] * norm_factor);
       if(isnan(spectrogram[t][i]) || isinf(spectrogram[t][i]))
         spectrogram[t][i] = -100.0;
       if(phasegram) phasegram[t][i] = spec_phse[i];
@@ -287,7 +287,7 @@ static void find_harmonic_trajectory(llsm_parameters param, FP_TYPE** spectrogra
     FP_TYPE peak_freq, peak_ampl;
     interp_peak(& peak_freq, & peak_ampl, spectrogram[i], peak_bin);
     freq[i] = peak_freq * fs / nfft;
-    ampl[i] = exp(peak_ampl);
+    ampl[i] = exp_3(peak_ampl);
     phse[i] = linterp(phasegram[i][(int)peak_freq], phasegram[i][(int)peak_freq + 1], fmod(peak_freq, 1.0));
     
     if(isnan(ampl[i])) // peak amplitude goes nan if one of the bins = -INF
@@ -297,16 +297,26 @@ static void find_harmonic_trajectory(llsm_parameters param, FP_TYPE** spectrogra
 
 static FP_TYPE* synth_sinusoid_frame(FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse, int nhar, int fs, int length) {
   FP_TYPE* x = calloc(length, sizeof(FP_TYPE));
+  FP_TYPE* s = calloc(length, sizeof(FP_TYPE));
   for(int i = 0; i < nhar; i ++) {
     FP_TYPE h_f = freq[i];
     FP_TYPE h_a = ampl[i];
     FP_TYPE h_p = phse[i];
     if(i > 0 && h_f < 50.0) // reaching the end
       break;
+
     FP_TYPE tphffs = 2.0 * M_PI / fs * h_f;
-    for(int t = - length / 2; t < length / 2; t ++)
-      x[t + length / 2] += fastcosfull(tphffs * t + h_p) * h_a;
+    FP_TYPE c = 2.0 * cos_3(tphffs);
+    s[0] = cos_3(tphffs * (- length / 2) + h_p) * h_a;
+    s[1] = cos_3(tphffs * (- length / 2 + 1) + h_p) * h_a;
+    x[0] += s[0];
+    x[1] += s[1];
+    for(int t = 2; t < length; t ++) {
+      s[t] = c * s[t - 1] - s[t - 2];
+      x[t] += s[t];
+    }
   }
+  free(s);
   return x;
 }
 
@@ -347,10 +357,10 @@ static FP_TYPE* filter_noise(llsm_parameters param, llsm_conf conf, FP_TYPE* x, 
       xfrm[j] *= w[j];
     fft(xfrm, NULL, realbuff, imagbuff, nfft, fftbuff);
     for(int j = 0; j < nfft / 2; j ++) {
-      FP_TYPE a = fastexp(spec[j]) * norm_factor; // amplitude
-      FP_TYPE p = fastatan2(imagbuff[j], realbuff[j]);
-      realbuff[j] = a * cos(p);
-      imagbuff[j] = a * sin(p);
+      FP_TYPE a = exp_2(spec[j]) * norm_factor; // amplitude
+      FP_TYPE p = atan2_2(imagbuff[j], realbuff[j]);
+      realbuff[j] = a * cos_1(p);
+      imagbuff[j] = a * sin_1(p);
     }
     complete_symm (realbuff, nfft);
     complete_asymm(imagbuff, nfft);
@@ -572,7 +582,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
     for(int i = 0; i < nx + LLSM_CHEBY_ORDER - 1; i ++)
       b_filtered[i] = b_filtered[i] * b_filtered[i];
     int mavgord = round(fs / favg * 2);
-    FP_TYPE* b_env = moving_avg(b_filtered + filtord / 2 - 1, nx, mavgord);
+    FP_TYPE* b_env = moving_avg(b_filtered, nx, mavgord);
     free(b_filtered);
     
     // CC5
@@ -730,7 +740,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
 
     FP_TYPE* b_normalized = calloc(*ny, sizeof(FP_TYPE));
     for(int i = 0; i < nfrm; i ++) {
-      FP_TYPE* hfrm = fetch_frame(b_filtered + filtord / 2, *ny, i * nhop, nhop * 2);
+      FP_TYPE* hfrm = fetch_frame(b_filtered, *ny, i * nhop, nhop * 2);
       FP_TYPE* efrm = fetch_frame(b_env, *ny, i * nhop, nhop * 2);
       FP_TYPE havg = 0;
       for(int j = 0; j < nhop * 2; j ++)

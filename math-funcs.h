@@ -47,6 +47,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
 #define LLSM_CHEBY_ORDER 6
 
+/*
+  For better efficiency we would like to replace some std math function call by corresponding approximated versions.
+  However we also need to be careful about approximation error.
+  The numbers after function names listed below indicate the need for precision, the high the more demanding.
+*/
+#define sin_3 sin
+#define sin_2 fastsinfull
+#define sin_1 fastersinfull
+#define cos_3 cos
+#define cos_2 fastcosfull
+#define cos_1 fastercosfull
+#define exp_3 exp
+#define exp_2 fastexp
+#define exp_1 fasterexp
+#define log_3 log
+#define log_2 fastlog
+#define log_1 fasterlog
+#define atan2_3 atan2
+#define atan2_2 atan2
+#define atan2_1 fastatan2
+
 #define def_singlepass(name, op, init) \
 inline FP_TYPE name(FP_TYPE* src, int n) { \
   FP_TYPE ret = init; \
@@ -73,21 +94,21 @@ inline FP_TYPE* boxcar(int n) {
 inline FP_TYPE* hanning(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
-    ret[i] = 0.5 * (1 - cos(2 * M_PI * i / (n - 1)));
+    ret[i] = 0.5 * (1 - cos_3(2 * M_PI * i / (n - 1)));
   return ret;
 }
 
 inline FP_TYPE* hamming(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
-    ret[i] = 0.54 - 0.46 * cos(2 * M_PI * i / (n - 1));
+    ret[i] = 0.54 - 0.46 * cos_3(2 * M_PI * i / (n - 1));
   return ret;
 }
 
 inline FP_TYPE* mltsine(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
-    ret[i] = sin(M_PI / n * (i + 0.5));
+    ret[i] = sin_3(M_PI / n * (i + 0.5));
   return ret;
 }
 
@@ -98,9 +119,9 @@ inline FP_TYPE* blackman_harris(int n) {
   const FP_TYPE a2 = 0.14128;
   const FP_TYPE a3 = 0.01168;
   for(int i = 0; i < n; i ++)
-    ret[i] = a0 - a1 * cos(2.0 * M_PI * i / n) +
-                  a2 * cos(4.0 * M_PI * i / n) -
-                  a3 * cos(6.0 * M_PI * i / n);
+    ret[i] = a0 - a1 * cos_3(2.0 * M_PI * i / n) +
+                  a2 * cos_3(4.0 * M_PI * i / n) -
+                  a3 * cos_3(6.0 * M_PI * i / n);
   return ret;
 }
 
@@ -195,7 +216,7 @@ inline FP_TYPE* abscplx(FP_TYPE* xr, FP_TYPE* xi, int n) {
 inline FP_TYPE* argcplx(FP_TYPE* xr, FP_TYPE* xi, int n) {
   FP_TYPE* y = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
-    y[i] = atan2(xi[i], xr[i]);
+    y[i] = atan2_3(xi[i], xr[i]);
   return y;
 }
 

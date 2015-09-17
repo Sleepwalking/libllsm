@@ -42,22 +42,22 @@ void llsm_idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n) {
     FP_TYPE tponk = tpon * k;
     if(xr != NULL && xi != NULL)
       for(int i = 0; i < n; i ++) {
-        FP_TYPE re = cos(tponk * i);
-        FP_TYPE im = sin(tponk * i);
+        FP_TYPE re = cos_3(tponk * i);
+        FP_TYPE im = sin_3(tponk * i);
         sumr += xr[i] * re - xi[i] * im;
         sumi += xr[i] * im + xi[i] * re;
       }
     else if(xr != NULL && xi == NULL)
       for(int i = 0; i < n; i ++) {
-        FP_TYPE re = cos(tponk * i);
-        FP_TYPE im = sin(tponk * i);
+        FP_TYPE re = cos_3(tponk * i);
+        FP_TYPE im = sin_3(tponk * i);
         sumr += xr[i] * re;
         sumi += xr[i] * im;
       }
     else if(xr == NULL && xi != NULL)
       for(int i = 0; i < n; i ++) {
-        FP_TYPE re = cos(tponk * i);
-        FP_TYPE im = sin(tponk * i);
+        FP_TYPE re = cos_3(tponk * i);
+        FP_TYPE im = sin_3(tponk * i);
         sumr -= xi[i] * im;
         sumi += xi[i] * re;
       }

@@ -11,9 +11,14 @@ LIBGVPS = $(LIBPYIN)/external/libgvps
 default: $(OUT_DIR)/libllsm.a
 test: $(OUT_DIR)/llsm-test
 	$(OUT_DIR)/llsm-test test/arctic_a0001.wav
+testapprox: $(OUT_DIR)/check-approx
+	$(OUT_DIR)/check-approx
 
 $(OUT_DIR)/llsm-test: $(OUT_DIR)/libllsm.a test/test.c external/matlabfunctions.c $(LIBGVPS)/build/libgvps.a $(LIBPYIN)/build/libpyin.a
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/llsm-test test/test.c external/matlabfunctions.c $(OUT_DIR)/libllsm.a $(LIBPYIN)/build/libpyin.a $(LIBGVPS)/build/libgvps.a -lm
+
+$(OUT_DIR)/check-approx: $(OUT_DIR)/libllsm.a test/check-approx.c external/matlabfunctions.c
+	$(CC) $(CFLAGS) -o $(OUT_DIR)/check-approx test/check-approx.c external/matlabfunctions.c $(OUT_DIR)/libllsm.a -lm
 
 $(LIBGVPS)/build/libgvps.a:
 	cd $(LIBGVPS); mkdir -p build; make
