@@ -10,6 +10,10 @@
 // Caution:
 //   Since these functions (wavread() and wavwrite()) are roughly implemented,
 //   we recommend more suitable functions provided by other organizations.
+//
+// Sept 18, 2015
+//   Add IEEE Float and fmt extension support for wavread. (Kanru Hua)
+//
 //-----------------------------------------------------------------------------
 
 #include <math.h>
@@ -30,84 +34,117 @@ inline int MyMin(int x, int y) {
   return x < y ? x : y;
 }
 
-//-----------------------------------------------------------------------------
-// CheckHeader() checks the .wav header. This function can only support the
-// monaural wave file. This function is only used in waveread().
-//-----------------------------------------------------------------------------
-static bool CheckHeader(FILE *fp) {
-  char data_check[5];
-  fread(data_check, 1, 4, fp);  // "RIFF"
-  data_check[4] = '\0';
-  if (0 != strcmp(data_check, "RIFF")) {
-    printf("RIFF error.\n");
-    return false;
-  }
-  fseek(fp, 4, SEEK_CUR);
-  fread(data_check, 1, 4, fp);  // "WAVE"
-  if (0 != strcmp(data_check, "WAVE")) {
-    printf("WAVE error.\n");
-    return false;
-  }
-  fread(data_check, 1, 4, fp);  // "fmt "
-  if (0 != strcmp(data_check, "fmt ")) {
-    printf("fmt error.\n");
-    return false;
-  }
-  fread(data_check, 1, 4, fp);  // 1 0 0 0
-  if (!(16 == data_check[0] && 0 == data_check[1] &&
-      0 == data_check[2] && 0 == data_check[3])) {
-    printf("fmt (2) error.\n");
-    return false;
-  }
-  fread(data_check, 1, 2, fp);  // 1 0
-  if (!(1 == data_check[0] && 0 == data_check[1])) {
-    printf("Format ID error.\n");
-    return false;
-  }
-  fread(data_check, 1, 2, fp);  // 1 0
-  if (!(1 == data_check[0] && 0 == data_check[1])) {
-    printf("This function cannot support stereo file\n");
-    return false;
-  }
-  return true;
-}
+#define FORMAT_PCM          1
+#define FORMAT_IEEE_FLOAT   3
+#define FORMAT_EXT        254
 
 //-----------------------------------------------------------------------------
 // GetParameters() extracts fp, nbit, wav_length from the .wav file
 // This function is only used in wavread().
 //-----------------------------------------------------------------------------
-static bool GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length) {
-  char data_check[5] = {0};
-  data_check[4] = '\0';
-  unsigned char for_int_number[4];
-  fread(for_int_number, 1, 4, fp);
+static bool GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length, int *format_tag) {
+  unsigned char data_check[5] = {0};
+  char str_check[5] = {0};
+  str_check[4] = '\0';
+  int fmt_size = 16;
+  
+  fread(str_check, 1, 4, fp);  // "RIFF"
+  str_check[4] = '\0';
+  if (0 != strcmp(str_check, "RIFF")) {
+    printf("RIFF error.\n");
+    return false;
+  }
+  fseek(fp, 4, SEEK_CUR);
+  fread(str_check, 1, 4, fp);  // "WAVE"
+  if (0 != strcmp(str_check, "WAVE")) {
+    printf("WAVE error.\n");
+    return false;
+  }
+  fread(str_check, 1, 4, fp);  // "fmt "
+  if (0 != strcmp(str_check, "fmt ")) {
+    printf("fmt error.\n");
+    return false;
+  }
+  fread(data_check, 1, 4, fp);  // cksize: 16/18/40 0 0 0
+  if (!((16 == data_check[0] || 18 == data_check[0] || 40 == data_check[0])
+   && 0 == data_check[1] && 0 == data_check[2] && 0 == data_check[3])) {
+    printf("fmt (2) error.\n");
+    return false;
+  }
+  fmt_size = data_check[0];
+  fread(data_check, 1, 2, fp);  // wFormatTag: 1(PCM)/3(IEEE Float) 0 | FE FF(extended format)
+  if (!(((1 == data_check[0] || 3 == data_check[0]) && 0 == data_check[1]) ||
+       (254 == data_check[0] && 255 == data_check[1]))) {
+    printf("Format ID error.\n");
+    return false;
+  }
+  if (1 == data_check[0])
+    *format_tag = FORMAT_PCM;
+  else if (3 == data_check[1])
+    *format_tag = FORMAT_IEEE_FLOAT;
+  else
+    *format_tag = FORMAT_EXT;
+  fread(data_check, 1, 2, fp);  // nChannels: 1 0
+  if (!(1 == data_check[0] && 0 == data_check[1])) {
+    printf("This function cannot support stereo file\n");
+    return false;
+  }
+  
+  fread(data_check, 1, 4, fp); // fs
   *fs = 0;
-  for (int i = 3; i >= 0; --i) *fs = *fs * 256 + for_int_number[i];
-  // Quantization
-  fseek(fp, 6, SEEK_CUR);
-  fread(for_int_number, 1, 2, fp);
-  *nbit = for_int_number[0];
-
+  for (int i = 3; i >= 0; --i) *fs = *fs * 256 + data_check[i];
+  fread(data_check, 1, 4, fp); // nAvgBytesPerSec
+  fread(data_check, 1, 2, fp); // nBlockAlign
+  int block_align = data_check[0];
+  fread(data_check, 1, 2, fp); // nBitsPerSample
+  *nbit = data_check[0];
+  
+  if ((*nbit) / 8 != block_align) {
+    printf("Unsupported block align.\n");
+    return false;
+  }
+  
+  short int extsize = 0;
+  if (fmt_size > 16) {
+    fread(&extsize, 1, 2, fp); // cbSize
+    if (0 != extsize && 22 != extsize) {
+      printf("Unsupported extension.\n");
+      return false;
+    }
+  }
+  if(extsize > 0) {
+    char extension[22];
+    fread(extension, 1, extsize, fp);
+    if (extension[6] == 1 && extension[7] == 0)
+      *format_tag = FORMAT_EXT;
+    else if (extension[6] == 3 && extension[7] == 0)
+      *format_tag = FORMAT_IEEE_FLOAT;
+    else {
+      printf("Unsupported format.\n");
+      return false;
+    }
+  }
+  
   // Skip until "data" is found. 2011/03/28
-  while (0 != fread(data_check, 1, 1, fp)) {
-    if (data_check[0] == 'd') {
-      fread(&data_check[1], 1, 3, fp);
-      if (0 != strcmp(data_check, "data")) {
+  while (0 != fread(str_check, 1, 1, fp)) {
+    if (str_check[0] == 'd') {
+      fread(&str_check[1], 1, 3, fp);
+      if (0 != strcmp(str_check, "data")) {
         fseek(fp, -3, SEEK_CUR);
       } else {
         break;
       }
     }
   }
-  if (0 != strcmp(data_check, "data")) {
+  if (0 != strcmp(str_check, "data")) {
     printf("data error.\n");
     return false;
   }
 
-  fread(for_int_number, 1, 4, fp);  // "data"
+  fread(data_check, 1, 4, fp);  // "data"
   *wav_length = 0;
   for (int i = 3; i >= 0; --i)
-    *wav_length = *wav_length * 256 + for_int_number[i];
+    *wav_length = *wav_length * 256 + data_check[i];
   *wav_length /= (*nbit / 8);
   return true;
 }
@@ -175,12 +212,8 @@ double * wavread(char* filename, int *fs, int *nbit, int *wav_length) {
     return NULL;
   }
 
-  if (CheckHeader(fp) == false) {
-    fclose(fp);
-    return NULL;
-  }
-
-  if (GetParameters(fp, fs, nbit, wav_length) == false) {
+  int format_tag = 0;
+  if (GetParameters(fp, fs, nbit, wav_length, & format_tag) == false) {
     fclose(fp);
     return NULL;
   }
@@ -191,18 +224,26 @@ double * wavread(char* filename, int *fs, int *nbit, int *wav_length) {
   int quantization_byte = *nbit / 8;
   double zero_line = pow(2.0, *nbit - 1);
   double tmp, sign_bias;
-  unsigned char for_int_number[4];
+  unsigned char for_int_number[8];
   for (int i = 0; i < *wav_length; ++i) {
     sign_bias = tmp = 0.0;
     fread(for_int_number, 1, quantization_byte, fp);  // "data"
-    if (for_int_number[quantization_byte-1] >= 128) {
-      sign_bias = pow(2.0, *nbit - 1);
-      for_int_number[quantization_byte - 1] =
-        for_int_number[quantization_byte - 1] & 0x7F;
+    if (format_tag == FORMAT_PCM) {
+      if (for_int_number[quantization_byte-1] >= 128) {
+        sign_bias = pow(2.0, *nbit - 1);
+        for_int_number[quantization_byte - 1] =
+          for_int_number[quantization_byte - 1] & 0x7F;
+      }
+      for (int j = quantization_byte - 1; j >= 0; --j)
+        tmp = tmp * 256.0 + for_int_number[j];
+      waveform[i] = (tmp - sign_bias) / zero_line;
+    } else
+    if (format_tag == FORMAT_IEEE_FLOAT) {
+      if (quantization_byte == 4)
+        waveform[i] = *((float*)for_int_number);
+      else if (quantization_byte == 8)
+        waveform[i] = *((double*)for_int_number);
     }
-    for (int j = quantization_byte - 1; j >= 0; --j)
-      tmp = tmp * 256.0 + for_int_number[j];
-    waveform[i] = (tmp - sign_bias) / zero_line;
   }
   fclose(fp);
   return waveform;
