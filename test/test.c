@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
   double tspent = get_time() - t0;
   printf("%f ms, %fs/s\n", tspent, (double)nx / fs / tspent * 1000);
   
-  wavwrite(y, ny, lparam.s_fs, nbit, "resynth.wav");
+  wavwrite(y, ny, lparam.s_fs, 16, "resynth.wav");
 
   llsm_deinit(lparam);
   llsm_delete(model);

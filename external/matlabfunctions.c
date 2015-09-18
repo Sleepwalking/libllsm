@@ -11,8 +11,10 @@
 //   Since these functions (wavread() and wavwrite()) are roughly implemented,
 //   we recommend more suitable functions provided by other organizations.
 //
-// Sept 18, 2015
-//   Add IEEE Float and fmt extension support for wavread. (Kanru Hua)
+// Sept 17, 2015
+//   Add IEEE Float and fmt extension support for wavread.
+//   Add 8bit/24bit/32bit PCM support for wavwrite.
+//     k.hua.kanru [at] ieee.org (Kanru Hua)
 //
 //-----------------------------------------------------------------------------
 
@@ -156,8 +158,16 @@ void wavwrite(double *x, int x_length, int fs, int nbit, char *filename) {
     return;
   }
 
+  if (nbit % 8 != 0 || nbit > 32) {
+    printf("Unsupported bit per sample.\n");
+    return;
+  }
+  
+  int nbyte = nbit / 8;
+  printf("%d %d\n", nbit, nbyte);
+
   char text[4] = {'R', 'I', 'F', 'F'};
-  uint32_t long_number = 36 + x_length * 2;
+  uint32_t long_number = 36 + x_length * nbyte;
   fwrite(text, 1, 4, fp);
   fwrite(&long_number, 4, 1, fp);
 
@@ -174,17 +184,17 @@ void wavwrite(double *x, int x_length, int fs, int nbit, char *filename) {
 
   long_number = 16;
   fwrite(&long_number, 4, 1, fp);
-  int16_t short_number = 1;
+  int16_t short_number = FORMAT_PCM;
   fwrite(&short_number, 2, 1, fp);
-  short_number = 1;
+  short_number = 1; // nChannels
   fwrite(&short_number, 2, 1, fp);
-  long_number = fs;
+  long_number = fs; // nSamplesPerSec
   fwrite(&long_number, 4, 1, fp);
-  long_number = fs * 2;
+  long_number = fs * nbyte; // nAvgBytesPerSec
   fwrite(&long_number, 4, 1, fp);
-  short_number = 2;
+  short_number = nbyte; // nBlockAlign
   fwrite(&short_number, 2, 1, fp);
-  short_number = 16;
+  short_number = nbit; // nBitsPerSample
   fwrite(&short_number, 2, 1, fp);
 
   text[0] = 'd';
@@ -192,14 +202,32 @@ void wavwrite(double *x, int x_length, int fs, int nbit, char *filename) {
   text[2] = 't';
   text[3] = 'a';
   fwrite(text, 1, 4, fp);
-  long_number = x_length * 2;
+  long_number = x_length * nbyte;
   fwrite(&long_number, 4, 1, fp);
 
-  int16_t tmp_signal;
+  if (nbyte == 1)
   for (int i = 0; i < x_length; ++i) {
-    tmp_signal = (int16_t)(MyMax(-32768,
-        MyMin(32767, (int)(x[i] * 32767))));
+    uint8_t tmp_signal;
+    tmp_signal = (uint8_t)(MyMax(0, MyMin(255, (int)((x[i] + 1.0) * 127))));
+    fwrite(&tmp_signal, 1, 1, fp);
+  }
+  else if (nbyte == 2)
+  for (int i = 0; i < x_length; ++i) {
+    int16_t tmp_signal;
+    tmp_signal = (int16_t)(MyMax(-32768, MyMin(32767, (int)(x[i] * 32767))));
     fwrite(&tmp_signal, 2, 1, fp);
+  }
+  else if (nbyte == 3)
+  for (int i = 0; i < x_length; ++i) {
+    int32_t tmp_signal;
+    tmp_signal = (int32_t)(MyMax(-8388608, MyMin(8388607, (int)(x[i] * 8388607))));
+    fwrite(&tmp_signal, 3, 1, fp);
+  }
+  else if (nbyte == 4)
+  for (int i = 0; i < x_length; ++i) {
+    int32_t tmp_signal;
+    tmp_signal = (int32_t)(MyMax(-2147483648, MyMin(2147483647, (int)(x[i] * 2147483647))));
+    fwrite(&tmp_signal, 4, 1, fp);
   }
 
   fclose(fp);
@@ -223,14 +251,19 @@ double * wavread(char* filename, int *fs, int *nbit, int *wav_length) {
 
   int quantization_byte = *nbit / 8;
   double zero_line = pow(2.0, *nbit - 1);
-  double tmp, sign_bias;
+  double tmp, sign_bias, nbitpow;
   unsigned char for_int_number[8];
+  nbitpow = pow(2.0, *nbit - 1);
   for (int i = 0; i < *wav_length; ++i) {
     sign_bias = tmp = 0.0;
     fread(for_int_number, 1, quantization_byte, fp);  // "data"
     if (format_tag == FORMAT_PCM) {
+      if (quantization_byte == 1) {
+        waveform[i] = for_int_number[0] / 128.0 - 0.5;
+        continue;
+      }
       if (for_int_number[quantization_byte-1] >= 128) {
-        sign_bias = pow(2.0, *nbit - 1);
+        sign_bias = nbitpow;
         for_int_number[quantization_byte - 1] =
           for_int_number[quantization_byte - 1] & 0x7F;
       }
