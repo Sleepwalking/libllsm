@@ -164,7 +164,6 @@ void wavwrite(double *x, int x_length, int fs, int nbit, char *filename) {
   }
   
   int nbyte = nbit / 8;
-  printf("%d %d\n", nbit, nbyte);
 
   char text[4] = {'R', 'I', 'F', 'F'};
   uint32_t long_number = 36 + x_length * nbyte;

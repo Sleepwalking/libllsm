@@ -45,7 +45,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include "external/fastapprox/fastexp.h"
 #include "external/fastapprox/fastlog.h"
 
-#define LLSM_CHEBY_ORDER 6
+#define LLSM_CHEBY_ORDER 5
 
 /*
   For better efficiency we would like to replace some std math function call by corresponding approximated versions.

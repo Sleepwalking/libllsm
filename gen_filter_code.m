@@ -2,8 +2,8 @@
 
 step_freq = 0.05;
 number = 18;
-order = 5;
-ripple = 1.0;
+order = 4;
+ripple = 0.5;
 coef_size = order + 1;
 
 filter_l_a = [];

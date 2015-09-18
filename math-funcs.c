@@ -151,9 +151,20 @@ static FP_TYPE* llsm_filter_order6(FP_TYPE* b, FP_TYPE* a, FP_TYPE* x, int nx) {
   return y;
 }
 
+static FP_TYPE* llsm_filter_order5(FP_TYPE* b, FP_TYPE* a, FP_TYPE* x, int nx) {
+  FP_TYPE* y = calloc(nx + 4, sizeof(FP_TYPE));
+  for(int i = 4; i < nx; i ++) {
+      y[i] -= a[1] * y[i - 1] + a[2] * y[i - 2] + a[3] * y[i - 3] + a[4] * y[i - 4];
+      y[i] += b[0] * x[i - 0] + b[1] * x[i - 1] + b[2] * x[i - 2] + b[3] * x[i - 3];
+  }
+  return y;
+}
+
 FP_TYPE* llsm_filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx) {
   if(na == 6 && nb == 6)
     return llsm_filter_order6(b, a, x, nx);
+  if(na == 5 && nb == 5)
+    return llsm_filter_order5(b, a, x, nx);
 
   int nh = max(na, nb);
   FP_TYPE* y = calloc(nx + nh - 1, sizeof(FP_TYPE));
@@ -176,6 +187,13 @@ FP_TYPE* llsm_chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, ch
   FP_TYPE* a, *b;
   int order = llsm_get_iir_filter(cutoff1, type, &a, &b);
   FP_TYPE* y = llsm_filter(b, order, a, order, x, nx);
+  FP_TYPE* z = calloc(nx, sizeof(FP_TYPE));
+  for(int i = 0; i < nx; i ++) z[i] = y[nx - i]; // flip the signal
+  FP_TYPE* y2 = llsm_filter(b, order, a, order, z, nx); // fliter again
+  for(int i = 0; i < nx; i ++) y[i] = y2[nx - i]; // flip back the signal
+  free(z);
+  free(y2);
+  
   free(a);
   free(b);
   return y;
