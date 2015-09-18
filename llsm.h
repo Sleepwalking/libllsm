@@ -31,12 +31,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
 /*
   Naming Conventions
-  x         input time domain signal
-  y         output time domain signal
-  h         FIR filter coefficient
-  nx/ny/... length of x/y/...
-  f0        fundamental frequency
-  fs        sampling frequency
+    x         input time domain signal
+    y         output time domain signal
+    h         FIR filter coefficient
+    nx/ny/... length of x/y/...
+    f0        fundamental frequency
+    fs        sampling frequency
+  
+  Memory Structure for FP_TYPE**
+    Unless otherwise specified, the first dimension is time and the second is frequency.
+    For example,
+      llsm_sinparam* speech_sin;
+      speech_sin -> freq = (FP_TYPE**)malloc2d(500, 80, sizeof(FP_TYPE)); // allocate 500 frames, each containing 80 sinusoids
+      speech_sin -> freq[25]; // pointer to sinusoid frequencies in the 25th frame
+      speech_sin -> freq[25][40]; // frequency of the 40th sinusoid (in this case, also harmonic) in the 25th frame
 */
 
 #ifndef LLSM
@@ -76,15 +84,14 @@ typedef struct {
   llsm_sinparam* sinu;  // sinusoidal parameters
   llsm_sinparam* eenv;  // sinusoidal parameters for turbulent noise energy
   FP_TYPE** noise;      // wrapped noise spectrogram
-  FP_TYPE* emin;       // mean turbulent noise energy
+  FP_TYPE* emin;        // minimum turbulent noise energy
   FP_TYPE* f0;          // fundamental frequency (Hz)
   llsm_conf conf;       // configuration
 } llsm;
 
 /*
   llsm_parameters: configurations for analysis/synthesis processes
-*/
-/*
+
   note: there might be a naming confusion between llsm and llsm_parameters. The former is the model
     paramters (i.e. what we get after analyzing the speech); the later is a set of configurations for
     analysis/synthesis processes. We name so to make it consistent with libpyin (see pyin_paramters).
