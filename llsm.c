@@ -29,7 +29,7 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 */
 
-#define ENABLE_DBGFUNCS
+//#define ENABLE_DBGFUNCS
 
 #include "llsm.h"
 #include <stdlib.h>
@@ -416,13 +416,14 @@ static void subtract_minimum_envelope(FP_TYPE* x, int nx, FP_TYPE* f0, int nhop,
   int* env_instants = gen_ps_instants(f0, nhop, nfrm, nx, fs, & ninstant);
   FP_TYPE* fenv_instants = calloc(ninstant, sizeof(FP_TYPE));
   int* env_winlen = calloc(ninstant, sizeof(int));
-  for(int i = 0; i < ninstant; i ++) env_winlen[i] = fs / f0[i];
+  for(int i = 0; i < ninstant; i ++) env_winlen[i] = fs / max(100, f0[i >= nfrm ? nfrm - 1 : i]) * 1.5;
   FP_TYPE* env_samples = llsm_nonuniform_envelope(x, nx, env_instants, env_winlen, ninstant, 0);
   FP_TYPE* iota = calloc(nx, sizeof(FP_TYPE));
   for(int i = 0; i < nx; i ++) iota[i] = i;
   for(int i = 0; i < ninstant; i ++) fenv_instants[i] = env_instants[i];
   FP_TYPE* env = interp1(fenv_instants, env_samples, ninstant, iota, nx);
   for(int i = 0; i < nx; i ++) x[i] -= env[i];
+
   free(env_instants);
   free(fenv_instants);
   free(env_winlen);
@@ -748,7 +749,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     
     // DC3
     subtract_minimum_envelope(b_env, *ny, model -> f0, nhop, nfrm, fs);
-
+    
     FP_TYPE* b_normalized = calloc(*ny, sizeof(FP_TYPE));
     for(int i = 0; i < nfrm; i ++) {
       FP_TYPE* hfrm = fetch_frame(b_filtered, *ny, i * nhop, nhop * 2);
@@ -778,7 +779,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     }
     for(int i = 0; i < *ny; i ++)
       b_env_mix[i] = sqrt(max(0, b_env_mix[i]));
-    
+
     // DC4
     for(int i = 0; i < *ny; i ++)
       noise_excitation[i] += b_normalized[i] * b_env_mix[i];
