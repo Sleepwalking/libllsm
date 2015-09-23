@@ -155,7 +155,7 @@ static FP_TYPE* llsm_filter_order5(FP_TYPE* b, FP_TYPE* a, FP_TYPE* x, int nx) {
   FP_TYPE* y = calloc(nx + 4, sizeof(FP_TYPE));
   for(int i = 4; i < nx; i ++) {
       y[i] -= a[1] * y[i - 1] + a[2] * y[i - 2] + a[3] * y[i - 3] + a[4] * y[i - 4];
-      y[i] += b[0] * x[i - 0] + b[1] * x[i - 1] + b[2] * x[i - 2] + b[3] * x[i - 3];
+      y[i] += b[0] * x[i - 0] + b[1] * x[i - 1] + b[2] * x[i - 2] + b[3] * x[i - 3] + b[4] * x[i - 4];
   }
   return y;
 }
@@ -193,7 +193,7 @@ FP_TYPE* llsm_chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, ch
   for(int i = 0; i < nx; i ++) y[i] = y2[nx - i]; // flip back the signal
   free(z);
   free(y2);
-  
+
   free(a);
   free(b);
   return y;

@@ -29,11 +29,23 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 */
 
+#define ENABLE_DBGFUNCS
+
 #include "llsm.h"
 #include <stdlib.h>
 #include <string.h>
 #include "math-funcs.h"
 #include "envelope.h"
+#include "external/matlabfunctions.h"
+
+#ifdef ENABLE_DBGFUNCS
+static void normalize_write(FP_TYPE* x, int nx, int fs, char* path, double gain) {
+  FP_TYPE* normx = calloc(nx, sizeof(FP_TYPE));
+  for(int i = 0; i < nx; i ++) normx[i] = x[i] * gain;
+  wavwrite(normx, nx, fs, 16, path);
+  free(normx);
+}
+#endif
 
 llsm_parameters llsm_init(int nnosband) {
   llsm_parameters ret;
