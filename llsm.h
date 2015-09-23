@@ -83,6 +83,7 @@ typedef struct {
   FP_TYPE noswrap;      // wrapping factor for noise spectrum
   FP_TYPE mvf;          // maximum voiced frequency
   FP_TYPE nosf;         // upper bound of noise frequency
+  FP_TYPE thop;         // hop size in seconds
   
   FP_TYPE* nosbandf;    // upper frequency of each noise band, excluding nosf; example: [2000, 4000, 8000]
   int nnosband;         // number of noise bands

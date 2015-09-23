@@ -637,6 +637,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   model -> emin = model -> nosch[param.a_nnosband - 1] -> emin;
   model -> conf.nfrm = nf0;
   model -> conf.nhop = param.a_nhop;
+  model -> conf.thop = (FP_TYPE)param.a_nhop / fs;
   model -> conf.nhar = param.a_nhar;
   model -> conf.nhare = param.a_nhare;
   model -> conf.nnos = param.a_nnos;
