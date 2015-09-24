@@ -596,6 +596,8 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
       b_filtered[i] = b_filtered[i] * b_filtered[i];
     int mavgord = round(fs / favg * 2);
     FP_TYPE* b_env = moving_avg(b_filtered, nx, mavgord);
+    for(int i = 0; i < nx; i ++)
+      b_env[i] = sqrt(b_env[i]);
     free(b_filtered);
     
     // CC5
@@ -777,8 +779,14 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
       free(hfrm);
       free(efrm);
     }
+    /*
+    char* writepath = strdup("/tmp/s .wav");
+    writepath[6] = '0' + b;
+    normalize_write(b_env_mix, *ny, fs, writepath, 1);
+    free(writepath);
+    */
     for(int i = 0; i < *ny; i ++)
-      b_env_mix[i] = sqrt(max(0, b_env_mix[i]));
+      b_env_mix[i] = b_env_mix[i];
 
     // DC4
     for(int i = 0; i < *ny; i ++)
@@ -794,11 +802,12 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
 
   // DC5
   FP_TYPE* y_nos = filter_noise(param, model -> conf, noise_excitation, *ny, model -> noise, 1);
-  free(noise_excitation);
   
   // DB2
   for(int i = 0; i < *ny; i ++)
     y_sin[i] += y_nos[i];
+  
+  free(noise_excitation);
   free(y_nos);
 
   free(ola_window);
