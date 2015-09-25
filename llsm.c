@@ -499,6 +499,8 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   model -> sinu -> freq = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
   model -> sinu -> ampl = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
   model -> sinu -> phse = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
+  model -> sinu -> nfrm = nf0;
+  model -> sinu -> nhar = param.a_nhar;
   FP_TYPE* tmpfreq = calloc(nf0, sizeof(FP_TYPE));
   FP_TYPE* tmpampl = calloc(nf0, sizeof(FP_TYPE));
   FP_TYPE* tmpphse = calloc(nf0, sizeof(FP_TYPE));
