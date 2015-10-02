@@ -184,11 +184,10 @@ static FP_TYPE* refine_f0(llsm_parameters param, int nfft, int fs, FP_TYPE* f0, 
     FP_TYPE p_d = phasegram_d[t][i_max];
     p   -= floor(p   / 2.0 / M_PI) * 2.0 * M_PI;
     p_d -= floor(p_d / 2.0 / M_PI) * 2.0 * M_PI;
-    if(p_d < p)
-      p_d += 2.0 * M_PI;
+    if(p < p_d)
+      p += 2.0 * M_PI;
     
     rf0[t] = (p - p_d) / 2.0 / M_PI * fs;
-    
     if(fabs(rf0[t] / fs * nfft - i_max) > 1 || fabs(rf0[t] - f0[t]) > 10)
       rf0[t] = f0[t];
   }
