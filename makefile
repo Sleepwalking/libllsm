@@ -1,6 +1,7 @@
 CC = gcc
+LINK = gcc -fopenmp
 AR = ar
-CFLAGS = -Ofast -std=c99 -Wall -fPIC
+CFLAGS = -Ofast -std=c99 -Wall -fPIC -fopenmp
 ARFLAGS = -rv
 OUT_DIR = ./build
 OBJS = $(OUT_DIR)/fftsg_h.o $(OUT_DIR)/math-funcs.o $(OUT_DIR)/llsm.o $(OUT_DIR)/envelope.o
@@ -15,7 +16,7 @@ testapprox: $(OUT_DIR)/check-approx
 	$(OUT_DIR)/check-approx
 
 $(OUT_DIR)/llsm-test: $(OUT_DIR)/libllsm.a test/test.c external/matlabfunctions.c $(LIBGVPS)/build/libgvps.a $(LIBPYIN)/build/libpyin.a
-	$(CC) $(CFLAGS) -o $(OUT_DIR)/llsm-test test/test.c external/matlabfunctions.c $(OUT_DIR)/libllsm.a $(LIBPYIN)/build/libpyin.a $(LIBGVPS)/build/libgvps.a -lm
+	$(LINK) $(CFLAGS) -o $(OUT_DIR)/llsm-test test/test.c external/matlabfunctions.c $(OUT_DIR)/libllsm.a $(LIBPYIN)/build/libpyin.a $(LIBGVPS)/build/libgvps.a -lm
 
 $(OUT_DIR)/check-approx: $(OUT_DIR)/libllsm.a test/check-approx.c external/matlabfunctions.c
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/check-approx test/check-approx.c external/matlabfunctions.c $(OUT_DIR)/libllsm.a -lm

@@ -698,6 +698,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   
   // D2
   FP_TYPE* ola_window = hanning(nhop * 2);
+# pragma omp parallel for
   for(int i = 0; i < nfrm; i ++) {
     int tn = i * nhop;
     if(model -> f0[i] <= 0.0) continue;
@@ -705,6 +706,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     FP_TYPE* sin_frame = synth_sinusoid_frame(
       model -> sinu -> freq[i], model -> sinu -> ampl[i], sin_phse[i],
       model -> conf.nhar, fs, nhop * 2);
+#   pragma omp critical
     for(int j = 0; j < nhop * 2; j ++)
       if(tn + j - nhop > 0)
         y_sin[tn + j - nhop] += sin_frame[j] * ola_window[j];
@@ -716,6 +718,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   FP_TYPE* noise_excitation = calloc(*ny, sizeof(FP_TYPE));
 
   // for each noise channel
+# pragma omp parallel for
   for(int b = 0; b < model -> conf.nnosband; b ++) {
     llsm_echannel* b_channel = model -> nosch[b];
     FP_TYPE* b_env = calloc(*ny, sizeof(FP_TYPE));
@@ -800,6 +803,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
       b_env_mix[i] = b_env_mix[i];
 
     // DC4
+#   pragma omp critical
     for(int i = 0; i < *ny; i ++)
       noise_excitation[i] += b_normalized[i] * b_env_mix[i];
     
