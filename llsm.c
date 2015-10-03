@@ -53,6 +53,7 @@ llsm_parameters llsm_init(int nnosband) {
   ret.a_nhar = 80;
   ret.a_nhare = 4;
   ret.a_nnos = 54;
+  ret.a_nosf = -1.0;
   ret.a_tfft = 0.04;
   ret.a_mvf = 8000.0;
   ret.a_noswrap = 5000.0;
@@ -490,6 +491,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   llsm* model = malloc(sizeof(llsm));
   model -> sinu = malloc(sizeof(llsm_sinparam));
   int nfft = pow(2, ceil(log2(fs * param.a_tfft)));
+  double nosf = param.a_nosf > 0.0 ? param.a_nosf : fs / 2.0;
   FP_TYPE fftbuff[65536];
 
   // C2
@@ -558,7 +560,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
     noise_spectrogram, NULL, NULL, NULL);
   
   // C22
-  FP_TYPE* freqwrap = llsm_wrap_freq(0, fs / 2, param.a_nnos, param.a_noswrap);
+  FP_TYPE* freqwrap = llsm_wrap_freq(0, nosf, param.a_nnos, param.a_noswrap);
   for(int t = 0; t < nf0; t ++) {
   /*
     // cut out the spectrum content around harmonics
@@ -665,7 +667,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   model -> conf.nhar = param.a_nhar;
   model -> conf.nhare = param.a_nhare;
   model -> conf.nnos = param.a_nnos;
-  model -> conf.nosf = fs / 2.0;
+  model -> conf.nosf = nosf;
   model -> conf.mvf = param.a_mvf;
   model -> conf.noswrap = param.a_noswrap;
   model -> conf.nosbandf = calloc(param.a_nnosband - 1, sizeof(FP_TYPE));
