@@ -44,7 +44,6 @@ llsm_parameters llsm_init() {
   ret.a_nhare = 4;
   ret.a_nnos = 54;
   ret.a_tfft = 0.04;
-  ret.a_rwin = 2.5;
   ret.a_mvf = 8000.0;
   ret.a_noswrap = 5000.0;
   ret.s_fs = 0;
@@ -58,11 +57,22 @@ static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int f
   FP_TYPE* xbuff = calloc(nfft, sizeof(FP_TYPE));
   FP_TYPE* ybuffr = calloc(nfft, sizeof(FP_TYPE));
   FP_TYPE* ybuffi = calloc(nfft, sizeof(FP_TYPE));
+  
+  double window_periods = 2.5;
+  if(! strcmp(wtype, "blackman_harris"))
+  /*
+    2.2 periods from both sides works well, though theoretically determined value is 3.0.
+    As long as the sinusoids are resolved, shorter is better.
+  */
+    window_periods = 2.2;
+  else if(! strcmp(wtype, "hamming"))
+    window_periods = 2.0;
+  else if(! strcmp(wtype, "hanning"))
+    window_periods = 2.0;
+  
   for(int t = 0; t < nf0; t ++) {
-    // 4 times fundamental period is the minimal window length that resolves the harmonics
-    //   for generalized Hamming/Blackman windows
     FP_TYPE resf = f0[t];
-    int winlen = resf > 0 ? min(nfft, floor(fs / resf * 2.0) * 2) : param.a_nhop * 2;
+    int winlen = resf > 0 ? min(nfft, floor(fs / resf * window_periods) * 2) : param.a_nhop * 2;
     int tn = t * param.a_nhop;
     
     FP_TYPE* w = NULL;

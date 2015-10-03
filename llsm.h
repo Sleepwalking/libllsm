@@ -104,7 +104,6 @@ typedef struct {
   int a_nnos;           // size of noise spectrum
   FP_TYPE a_noswrap;    // wrapping factor for noise spectrum
   FP_TYPE a_tfft;       // size of transformation in seconds
-  FP_TYPE a_rwin;       // ratio of analysis window length to period
   FP_TYPE a_mvf;        // maximum voiced frequency
 
   // params for synthesis
