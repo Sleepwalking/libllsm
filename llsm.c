@@ -818,7 +818,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   free(s);
 
   // DC5
-  FP_TYPE* y_nos = filter_noise(param, model -> conf, noise_excitation, *ny, model -> noise, 1);
+  FP_TYPE* y_nos = filter_noise(param, model -> conf, noise_excitation, *ny, model -> noise, 2);
   
   // DB2
   for(int i = 0; i < *ny; i ++)
