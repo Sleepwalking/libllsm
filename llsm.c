@@ -651,12 +651,12 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
     if(rf0[i] <= 0.0) continue;
     for(int j = 0; j < param.a_nhar; j ++) {
       model -> sinu -> phse[i][j] -= base * model -> sinu -> freq[i][j] / rf0[i];
-      model -> sinu -> phse[i][j] = fmod(model -> sinu -> phse[i][j], M_PI * 2.0);
+      model -> sinu -> phse[i][j] = fmod(model -> sinu -> phse[i][j] + 1001.0 * M_PI, M_PI * 2.0) - M_PI;
     }
     for(int b = 0; b < param.a_nnosband; b ++)
       for(int j = 0; j < param.a_nhare; j ++) {
         model -> nosch[b] -> eenv -> phse[i][j] -= base * model -> nosch[b] -> eenv -> freq[i][j] / rf0[i];
-        model -> nosch[b] -> eenv -> phse[i][j] = fmod(model -> nosch[b] -> eenv -> phse[i][j], M_PI * 2.0);
+        model -> nosch[b] -> eenv -> phse[i][j] = fmod(model -> nosch[b] -> eenv -> phse[i][j] + 1001.0 * M_PI, M_PI * 2.0) - M_PI;
       }
   }
   
