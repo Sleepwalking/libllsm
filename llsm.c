@@ -683,35 +683,37 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   int nhop = model -> conf.nhop;
   int fs = param.s_fs;
   int nfft = nhop * 4;
+  int ola_factor = 4 / 2;
   
   *ny = nfrm * nhop + nfft;
   FP_TYPE* y_sin = calloc(*ny, sizeof(FP_TYPE));
   
   // D1
-  FP_TYPE** sin_phse = (FP_TYPE**)copy2d(model -> sinu -> phse, nfrm, model -> conf.nhar , sizeof(FP_TYPE));
+  FP_TYPE** sin_phse = (FP_TYPE**)malloc2d(nfrm * ola_factor, model -> conf.nhar , sizeof(FP_TYPE));
   FP_TYPE phse0 = 0;
-  for(int i = 1; i < nfrm; i ++) {
-    FP_TYPE f0 = model -> sinu -> freq[i][0];
-    phse0 += f0 * nhop / fs * 2.0 * M_PI;
+  for(int i = 1; i < nfrm * ola_factor; i ++) {
+    FP_TYPE f0 = model -> sinu -> freq[i / ola_factor][0];
+    phse0 += f0 * nhop / ola_factor / fs * 2.0 * M_PI;
     sin_phse[i][0] = fmod(phse0, 2.0 * M_PI) - M_PI;
     for(int j = 1; j < model -> conf.nhar; j ++)
-      sin_phse[i][j] = sin_phse[i][0] / f0 * model -> sinu -> freq[i][j] + model -> sinu -> phse[i][j];
+      sin_phse[i][j] = sin_phse[i][0] / f0 * model -> sinu -> freq[i / ola_factor][j]
+        + model -> sinu -> phse[i / ola_factor][j];
   }
   
   // D2
   FP_TYPE* ola_window = hanning(nhop * 2);
 # pragma omp parallel for
-  for(int i = 0; i < nfrm; i ++) {
-    int tn = i * nhop;
-    if(model -> f0[i] <= 0.0) continue;
+  for(int i = 0; i < nfrm * ola_factor; i ++) {
+    int tn = i * nhop / ola_factor;
+    if(model -> f0[i / ola_factor] <= 0.0) continue;
 
     FP_TYPE* sin_frame = synth_sinusoid_frame(
-      model -> sinu -> freq[i], model -> sinu -> ampl[i], sin_phse[i],
+      model -> sinu -> freq[i / ola_factor], model -> sinu -> ampl[i / ola_factor], sin_phse[i],
       model -> conf.nhar, fs, nhop * 2);
 #   pragma omp critical
     for(int j = 0; j < nhop * 2; j ++)
       if(tn + j - nhop > 0)
-        y_sin[tn + j - nhop] += sin_frame[j] * ola_window[j];
+        y_sin[tn + j - nhop] += sin_frame[j] * ola_window[j] / ola_factor;
     free(sin_frame);
   }
   
@@ -731,7 +733,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     for(int i = 0; i < nfrm; i ++) {
       FP_TYPE f0 = model -> sinu -> freq[i][0];
       for(int j = 0; j < model -> conf.nhare; j ++)
-        b_phse[i][j] = sin_phse[i][0] / f0 * b_channel -> eenv -> freq[i][j] + b_channel -> eenv -> phse[i][j];
+        b_phse[i][j] = sin_phse[i * ola_factor][0] / f0 * b_channel -> eenv -> freq[i][j] + b_channel -> eenv -> phse[i][j];
     }
     
     // D3
@@ -814,7 +816,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     free(b_env_mix);
     free(b_env);
   }
-  free2d(sin_phse, nfrm);
+  free2d(sin_phse, nfrm * ola_factor);
   free(s);
 
   // DC5
