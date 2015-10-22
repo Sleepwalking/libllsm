@@ -504,7 +504,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
 
   // C3
   model -> f0 = refine_f0(param, nfft, fs, f0, nf0, spectrogram, phasegram, phasegram_d);
-  FP_TYPE* rf0 = f0;
+  FP_TYPE* rf0 = model -> f0;
 
   // C4
   model -> sinu -> freq = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
@@ -523,10 +523,15 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
       model -> sinu -> ampl[j][i] = tmpampl[j];
       model -> sinu -> phse[j][i] = tmpphse[j];
     }
-    if(i == 0)
-      for(int j = 0; j < nf0; j ++)
-        if(fabs(rf0[j] - tmpfreq[j]) > 1)
-          rf0[j] = tmpfreq[j];
+    if(i == 5)
+      for(int j = 0; j < nf0; j ++) {
+        FP_TYPE avg_f0 = 0;
+        for(int k = 0; k < i; k ++)
+          avg_f0 += model -> sinu -> freq[j][k] / (k + 1.0);
+        avg_f0 /= i;
+        if(fabs(rf0[j] - avg_f0) > 1)
+          rf0[j] = avg_f0;
+      }
   }
   free2d(spectrogram, nf0);
   free2d(phasegram, nf0);
@@ -693,14 +698,14 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   FP_TYPE* sin_phse_sync = calloc(nfrm * ola_factor, sizeof(FP_TYPE));
   FP_TYPE phse0 = 0;
   for(int i = 1; i < nfrm * ola_factor; i ++) {
-    FP_TYPE f0 = model -> sinu -> freq[i / ola_factor][0];
+    FP_TYPE f0 = model -> f0[i / ola_factor];
     phse0 += f0 * nhop / ola_factor / fs * 2.0 * M_PI;
     sin_phse_sync[i] = fmod(phse0, 2.0 * M_PI) - M_PI;
     for(int j = 0; j < model -> conf.nhar; j ++)
       sin_phse[i][j] = sin_phse_sync[i] / f0 * model -> sinu -> freq[i / ola_factor][j]
         + model -> sinu -> phse[i / ola_factor][j];
   }
-    
+  
   // D2
   FP_TYPE* ola_window = hanning(nhop * 2);
 # pragma omp parallel for
@@ -732,7 +737,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     // D1
     FP_TYPE** b_phse = (FP_TYPE**)copy2d(b_channel -> eenv -> phse, nfrm, model -> conf.nhare, sizeof(FP_TYPE));
     for(int i = 0; i < nfrm; i ++) {
-      FP_TYPE f0 = model -> sinu -> freq[i][0];
+      FP_TYPE f0 = model -> f0[i];
       for(int j = 0; j < model -> conf.nhare; j ++)
         b_phse[i][j] = sin_phse_sync[i * ola_factor] / f0 * b_channel -> eenv -> freq[i][j] + b_channel -> eenv -> phse[i][j];
     }
