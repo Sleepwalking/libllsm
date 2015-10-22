@@ -464,10 +464,15 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
       model -> sinu -> ampl[j][i] = tmpampl[j];
       model -> sinu -> phse[j][i] = tmpphse[j];
     }
-    if(i == 0)
-      for(int j = 0; j < nf0; j ++)
-        if(fabs(rf0[j] - tmpfreq[j]) > 1)
-          rf0[j] = tmpfreq[j];
+    if(i == 5)
+      for(int j = 0; j < nf0; j ++) {
+        FP_TYPE avg_f0 = 0;
+        for(int k = 0; k < i; k ++)
+          avg_f0 += model -> sinu -> freq[j][k] / (k + 1.0);
+        avg_f0 /= i;
+        if(fabs(rf0[j] - avg_f0) > 1)
+          rf0[j] = avg_f0;
+      }
   }
   free2d(spectrogram, nf0);
   free2d(phasegram, nf0);
