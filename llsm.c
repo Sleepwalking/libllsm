@@ -447,7 +447,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
 
   // C3
   model -> f0 = refine_f0(param, nfft, fs, f0, nf0, spectrogram, phasegram, phasegram_d);
-  FP_TYPE* rf0 = f0;
+  FP_TYPE* rf0 = model -> f0;
 
   // C4
   model -> sinu -> freq = (FP_TYPE**)malloc2d(nf0, param.a_nhar, sizeof(FP_TYPE));
@@ -605,7 +605,7 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
   FP_TYPE** env_phse = (FP_TYPE**)copy2d(model -> eenv -> phse, nfrm, model -> conf.nhare, sizeof(FP_TYPE));
   FP_TYPE phse0 = 0;
   for(int i = 1; i < nfrm; i ++) {
-    FP_TYPE f0 = model -> sinu -> freq[i][0];
+    FP_TYPE f0 = model -> f0[i];
     phse0 += f0 * nhop / fs * 2.0 * M_PI;
     sin_phse[i][0] = fmod(phse0, 2.0 * M_PI) - M_PI;
     for(int j = 1; j < model -> conf.nhar; j ++)
