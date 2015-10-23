@@ -668,12 +668,8 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
     for(int j = 0; j < nhop * 2; j ++)
       hfrm[j] *= sqrt(1.0 / (havg + EPS));
 
-    if(model -> f0[i] <= 0.0)
-      for(int j = 0; j < nhop * 2; j ++)
-        efrm[j] = havg;
-    else
-      for(int j = 0; j < nhop * 2; j ++)
-        efrm[j] += model -> emin[i];
+    for(int j = 0; j < nhop * 2; j ++)
+      efrm[j] += model -> emin[i];
 
     for(int j = 0; j < nhop * 2; j ++)
       if(i * nhop + j - nhop > 0) {
