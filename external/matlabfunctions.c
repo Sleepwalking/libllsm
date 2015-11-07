@@ -44,7 +44,7 @@ inline int MyMin(int x, int y) {
 // GetParameters() extracts fp, nbit, wav_length from the .wav file
 // This function is only used in wavread().
 //-----------------------------------------------------------------------------
-static bool GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length, int *format_tag) {
+static bool GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length, int *format_tag, int *nchannel) {
   unsigned char data_check[5] = {0};
   char str_check[5] = {0};
   str_check[4] = '\0';
@@ -63,10 +63,11 @@ static bool GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length, int *fo
     return false;
   }
   fread(str_check, 1, 4, fp);  // "fmt "
-  if (0 != strcmp(str_check, "fmt ")) {
-    printf("fmt error.\n");
-    return false;
-  }
+  while(strcmp(str_check, "fmt "))
+    if(! fread(str_check, 1, 4, fp)) {
+      printf("fmt error.\n");
+      return false;
+    }
   fread(data_check, 1, 4, fp);  // cksize: 16/18/40 0 0 0
   if (!((16 == data_check[0] || 18 == data_check[0] || 40 == data_check[0])
    && 0 == data_check[1] && 0 == data_check[2] && 0 == data_check[3])) {
@@ -87,8 +88,14 @@ static bool GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length, int *fo
   else
     *format_tag = FORMAT_EXT;
   fread(data_check, 1, 2, fp);  // nChannels: 1 0
-  if (!(1 == data_check[0] && 0 == data_check[1])) {
-    printf("This function cannot support stereo file\n");
+  
+  if (1 == data_check[0] && 0 == data_check[1])
+    *nchannel = 1;
+  else
+  if (2 == data_check[0] && 0 == data_check[1])
+    *nchannel = 2;
+  else {
+    printf("Unsupported channel number %d %d.\n", data_check[0], data_check[1]);
     return false;
   }
   
@@ -97,7 +104,7 @@ static bool GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length, int *fo
   for (int i = 3; i >= 0; --i) *fs = *fs * 256 + data_check[i];
   fread(data_check, 1, 4, fp); // nAvgBytesPerSec
   fread(data_check, 1, 2, fp); // nBlockAlign
-  int block_align = data_check[0];
+  int block_align = data_check[0] / (*nchannel);
   fread(data_check, 1, 2, fp); // nBitsPerSample
   *nbit = data_check[0];
   
@@ -147,9 +154,15 @@ static bool GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length, int *fo
   *wav_length = 0;
   for (int i = 3; i >= 0; --i)
     *wav_length = *wav_length * 256 + data_check[i];
-  *wav_length /= (*nbit / 8);
+  *wav_length /= (*nbit / 8) * (*nchannel);
   return true;
 }
+
+typedef union {
+  unsigned char data[16];
+  float num_float;
+  double num_double;
+} char_float_double;
 
 void wavwrite(double *x, int x_length, int fs, int nbit, char *filename) {
   FILE *fp = fopen(filename, "wb");
@@ -240,7 +253,8 @@ double * wavread(char* filename, int *fs, int *nbit, int *wav_length) {
   }
 
   int format_tag = 0;
-  if (GetParameters(fp, fs, nbit, wav_length, & format_tag) == false) {
+  int nchannel = 1;
+  if (GetParameters(fp, fs, nbit, wav_length, & format_tag, & nchannel) == false) {
     fclose(fp);
     return NULL;
   }
@@ -251,30 +265,33 @@ double * wavread(char* filename, int *fs, int *nbit, int *wav_length) {
   int quantization_byte = *nbit / 8;
   double zero_line = pow(2.0, *nbit - 1);
   double tmp, sign_bias, nbitpow;
-  unsigned char for_int_number[8];
+  char_float_double for_int_number;
   nbitpow = pow(2.0, *nbit - 1);
   for (int i = 0; i < *wav_length; ++i) {
     sign_bias = tmp = 0.0;
-    fread(for_int_number, 1, quantization_byte, fp);  // "data"
+    fread(for_int_number.data, 1, quantization_byte, fp);  // "data"
+    if(nchannel == 2)
+      fread(for_int_number.data + 8, 1, quantization_byte, fp); // right channel
     if (format_tag == FORMAT_PCM) {
       if (quantization_byte == 1) {
-        waveform[i] = for_int_number[0] / 128.0 - 0.5;
+        waveform[i] = for_int_number.data[0] / 128.0 - 0.5;
         continue;
       }
-      if (for_int_number[quantization_byte-1] >= 128) {
+      if (for_int_number.data[quantization_byte-1] >= 128) {
         sign_bias = nbitpow;
-        for_int_number[quantization_byte - 1] =
-          for_int_number[quantization_byte - 1] & 0x7F;
+        for_int_number.data[quantization_byte - 1] =
+          for_int_number.data[quantization_byte - 1] & 0x7F;
       }
       for (int j = quantization_byte - 1; j >= 0; --j)
-        tmp = tmp * 256.0 + for_int_number[j];
+        tmp = tmp * 256.0 + for_int_number.data[j];
       waveform[i] = (tmp - sign_bias) / zero_line;
     } else
     if (format_tag == FORMAT_IEEE_FLOAT) {
-      if (quantization_byte == 4)
-        waveform[i] = *((float*)for_int_number);
-      else if (quantization_byte == 8)
-        waveform[i] = *((double*)for_int_number);
+      if (quantization_byte == 4) {
+        waveform[i] = for_int_number.num_float;
+      } else if (quantization_byte == 8) {
+        waveform[i] = for_int_number.num_double;
+      }
     }
   }
   fclose(fp);
