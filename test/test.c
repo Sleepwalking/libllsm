@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
   lparam.a_nosbandf[2] = 12000;
   lparam.a_mvf = 12000;
   //lparam.a_nnos = 128;
-  //lparam.a_nosf = 16000;
+  lparam.a_nosf = 16000;
   lparam.a_nhop = pow(2, ceil(log2(fs * 0.005)));
   printf("Analyzing...\n");
   llsm* model = llsm_analyze(lparam, x, nx, fs, f0, nfrm);

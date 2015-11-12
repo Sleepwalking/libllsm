@@ -125,6 +125,17 @@ inline FP_TYPE* blackman_harris(int n) {
   return ret;
 }
 
+inline FP_TYPE* blackman(int n) {
+  FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
+  const FP_TYPE a0 = 0.42;
+  const FP_TYPE a1 = 0.5;
+  const FP_TYPE a2 = 0.08;
+  for(int i = 0; i < n; i ++)
+    ret[i] = a0 - a1 * cos_3(2.0 * M_PI * i / n) +
+                  a2 * cos_3(4.0 * M_PI * i / n);
+  return ret;
+}
+
 void cdft(int n, int isgn, FP_TYPE* a);
 void rdft(int n, int isgn, FP_TYPE* a);
 void llsm_idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n);
