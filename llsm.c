@@ -66,9 +66,11 @@ static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int f
   */
     window_periods = 2.2;
   else if(! strcmp(wtype, "hamming"))
-    window_periods = 2.0;
+    window_periods = 1.5;
   else if(! strcmp(wtype, "hanning"))
-    window_periods = 2.0;
+    window_periods = 1.5;
+  else if(! strcmp(wtype, "blackman"))
+    window_periods = 1.65;
   
   for(int t = 0; t < nf0; t ++) {
     FP_TYPE resf = f0[t];
@@ -82,6 +84,8 @@ static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int f
       w = hamming(winlen);
     else if(! strcmp(wtype, "hanning"))
       w = hanning(winlen);
+    else if(! strcmp(wtype, "blackman"))
+      w = blackman(winlen);
     FP_TYPE norm_factor = 2.0 / sumfp(w, winlen);
 
     FP_TYPE* xfrm, * xfrm_d;
@@ -442,7 +446,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   FP_TYPE** phasegram   = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
   FP_TYPE** phasegram_d = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
 
-  spectrogram_analyze(param, x, nx, fs, f0, nf0, nfft, fftbuff, "blackman_harris",
+  spectrogram_analyze(param, x, nx, fs, f0, nf0, nfft, fftbuff, "blackman",
     spectrogram, phasegram, phasegram_d, NULL);
 
   // C3
@@ -542,7 +546,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   FP_TYPE** env_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
   FP_TYPE** env_phasegram   = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));
   model -> emin = calloc(nf0, sizeof(FP_TYPE));
-  spectrogram_analyze(param, xhe + mavgord / 2, nx, fs, f0, nf0, nfft, fftbuff, "blackman_harris",
+  spectrogram_analyze(param, xhe + mavgord / 2, nx, fs, f0, nf0, nfft, fftbuff, "blackman",
     env_spectrogram, env_phasegram, NULL, model -> emin);
   free(xhe);
   
