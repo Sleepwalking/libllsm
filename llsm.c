@@ -587,6 +587,13 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
     }*/
     model -> noise[t] = llsm_geometric_envelope(noise_spectrogram[t], nfft / 2, fs, freqwrap, param.a_nnos);
   }
+  
+  // remove the content above nyquist frequency
+  for(int i = 0; i < param.a_nnos; i ++)
+    if(freqwrap[i] >= fs / 2)
+      for(int t = 0; t < nf0; t ++)
+        model -> noise[t] = -100;
+  
   free(freqwrap);
   free2d(noise_spectrogram, nf0);
 
