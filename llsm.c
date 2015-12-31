@@ -531,7 +531,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   for(int i = 0; i < param.a_nnos; i ++)
     if(freqwrap[i] >= fs / 2)
       for(int t = 0; t < nf0; t ++)
-        model -> noise[t] = -100;
+        model -> noise[t][i] = -100;
   
   free(freqwrap);
   free2d(noise_spectrogram, nf0);

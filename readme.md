@@ -3,7 +3,9 @@ libllsm
 
 Low Level Speech Model for speech analysis, manipulation and synthesis.
 
-LLSM is an extended *Harmonic + Noise Model* with turbulent noise modeling, shape-invariant phase preservation and a range of other techniques combined.
+LLSM is an extended *Harmonic + Stochastic Model* with turbulent noise modeling, shape-invariant phase preservation and a range of other techniques combined.
+
+**Warning: the algorithm is still under development. In other words, libllsm haven't reached alpha version yet, though it already seems to work perfectly fine. In worst case, it might be possible that someday I delete the whole repository and start over.**
 
 License: [UIUC license](https://en.wikipedia.org/wiki/University_of_Illinois/NCSA_Open_Source_License)
 
