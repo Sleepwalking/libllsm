@@ -118,15 +118,10 @@ FP_TYPE* llsm_geometric_envelope(FP_TYPE* spectrum, int ns, int fs, FP_TYPE* fre
     FP_TYPE fcenter = freq[i];
     int idxl = max(0, floor((fcenter + fprev) / 2.0 / fs * nfft));
     int idxh = min(ns - 1, ceil((fcenter + fnext) / 2.0 / fs * nfft));
-    // mean energy representation seems to introduce magnitude distortion
-    /*
-    env[i] = 0;
-    for(int j = idxl; j <= idxh; j ++)
-      env[i] += exp(spectrum[j] * 2.0);
-    env[i] /= idxh - idxl + 1;
-    env[i] = log(env[i]) / 2.0;
-    */
-    env[i] = maxfp(spectrum + idxl, idxh - idxl + 1);
+    if(idxl >= ns)
+      env[i] = env[i - 1];
+    else
+      env[i] = maxfp(spectrum + idxl, idxh - idxl + 1);
   }
   return env;
 }
