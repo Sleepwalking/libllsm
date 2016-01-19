@@ -70,7 +70,7 @@ static void spectrogram_analyze(llsm_parameters param, FP_TYPE* x, int nx, int f
   else if(! strcmp(wtype, "hanning"))
     window_periods = 1.5;
   else if(! strcmp(wtype, "blackman"))
-    window_periods = 1.65;
+    window_periods = 2.0;
   
   for(int t = 0; t < nf0; t ++) {
     FP_TYPE resf = f0[t];
