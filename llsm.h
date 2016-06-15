@@ -37,7 +37,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
     nx/ny/... length of x/y/...
     f0        fundamental frequency
     fs        sampling frequency
-  
+
   Memory Structure for FP_TYPE**
     Unless otherwise specified, the first dimension is time and the second is frequency.
     For example,
@@ -68,7 +68,7 @@ typedef struct {
 */
 typedef struct {
   llsm_sinparam* eenv;  // sinusoidal parameters for noise energy envelope
-  FP_TYPE* emin;        // minimum noise energy  
+  FP_TYPE* emin;        // minimum noise energy
 } llsm_echannel;
 
 /*
@@ -84,7 +84,7 @@ typedef struct {
   FP_TYPE mvf;          // maximum voiced frequency
   FP_TYPE nosf;         // upper bound of noise frequency
   FP_TYPE thop;         // hop size in seconds
-  
+
   FP_TYPE* nosbandf;    // upper frequency of each noise band, excluding nosf; example: [2000, 4000, 8000]
   int nnosband;         // number of noise bands
 } llsm_conf;
@@ -109,6 +109,12 @@ typedef struct {
     paramters (i.e. what we get after analyzing the speech); the later is a set of configurations for
     analysis/synthesis processes. We name so to make it consistent with libpyin (see pyin_paramters).
 */
+
+typedef enum {
+  qfft = 0,
+  qhm
+} llsm_harmonic_analysis_method;
+
 typedef struct {
   // params for analysis
   int a_nhop;           // hop size in samples
@@ -121,6 +127,12 @@ typedef struct {
   FP_TYPE a_nosf;       // maximum noise frequency
   FP_TYPE* a_nosbandf;  // upper frequency of each noise band
   int a_nnosband;       // number of noise bands
+
+  llsm_harmonic_analysis_method a_method;
+  int a_maxairiter;
+  int a_maxqhmiter;
+  FP_TYPE a_maxqhmcorr;
+  FP_TYPE a_targetsrer;
 
   // params for synthesis
   int s_fs;             // sampling frequency
@@ -142,4 +154,3 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny);
 void llsm_delete(llsm* model);
 
 #endif
-

@@ -47,7 +47,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-inline void** malloc2d(size_t m, size_t n, size_t size) {
+static inline void** malloc2d(size_t m, size_t n, size_t size) {
   void** ret = calloc(m, sizeof(void*));
   for(size_t i = 0; i < m; i++)
     ret[i] = calloc(n, size);
@@ -55,7 +55,7 @@ inline void** malloc2d(size_t m, size_t n, size_t size) {
 }
 
 #define copy2d(src, m, n, size) copy2d_((void**)src, m, n, size)
-inline void** copy2d_(void** src, size_t m, size_t n, size_t size) {
+static inline void** copy2d_(void** src, size_t m, size_t n, size_t size) {
   void** ret = malloc2d(m, n, size);
   for(size_t i = 0; i < m; i ++)
     memcpy(ret[i], src[i], n * size);
@@ -63,13 +63,13 @@ inline void** copy2d_(void** src, size_t m, size_t n, size_t size) {
 }
 
 #define free2d(ptr, m) free2d_((void**)(ptr), m)
-inline void free2d_(void** ptr, size_t m) {
+static inline void free2d_(void** ptr, size_t m) {
   for(size_t i = 0; i < m; i ++)
     free(ptr[i]);
   free(ptr);
 }
 
-inline FP_TYPE* fetch_frame(FP_TYPE* x, int nx, int center, int nf) {
+static inline FP_TYPE* fetch_frame(FP_TYPE* x, int nx, int center, int nf) {
   FP_TYPE* y = calloc(nf, sizeof(FP_TYPE));
   for(int i = 0; i < nf; i ++) {
     int isrc = center + i - nf / 2;
@@ -79,4 +79,3 @@ inline FP_TYPE* fetch_frame(FP_TYPE* x, int nx, int center, int nf) {
 }
 
 #endif
-

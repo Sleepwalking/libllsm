@@ -35,3 +35,6 @@ Works cited
 
 * Stylianou, Yannis. "Harmonic plus noise models for speech, combined with statistical methods, for speech and speaker modification." Diss. Ecole Nationale Supérieure des Télécommunications. 1996.
 
+* Pantazis Y, Rosec O, Stylianou Y. Iterative estimation of sinusoidal signal parameters[J]. Signal Processing Letters, IEEE, 2010, 17(5): 461-464.
+
+* Degottex G, Stylianou Y. Analysis and synthesis of speech using an adaptive full-band harmonic model[J]. Audio, Speech, and Language Processing, IEEE Transactions on, 2013, 21(10): 2085-2095.
