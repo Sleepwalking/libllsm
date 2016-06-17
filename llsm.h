@@ -113,8 +113,8 @@ typedef struct {
 */
 
 typedef enum {
-  qfft = 0,
-  qhm
+  qfft = 0, // use fft spectrum peak picking on quasi-harmonic analysis
+  qhm // use Least-Square
 } llsm_harmonic_analysis_method;
 
 typedef struct {
@@ -130,12 +130,11 @@ typedef struct {
   FP_TYPE* a_nosbandf;  // upper frequency of each noise band
   int a_nnosband;       // number of noise bands
 
-  llsm_harmonic_analysis_method a_method;
-  int a_qhmlsmethod;
-  int a_maxairiter;
-  int a_maxqhmiter;
-  FP_TYPE a_maxqhmcorr;
-  FP_TYPE a_targetsrer;
+  llsm_harmonic_analysis_method a_method; // method of quasi-harmonic analysis, qfft by default
+  char a_qhmlsmethod; // method of LS. 'Q' remains QR/LR(faster). 'S' remains SVD(better quality, very slow).
+  int a_maxairiter;  // maximum number of air iteration, 16 by default
+  int a_maxqhmiter; // maximum number of qhm iteration, 4 by default
+  FP_TYPE a_maxqhmcorr; // maximum frequency correction per iteration(in Hz)
 
   // params for synthesis
   int s_fs;             // sampling frequency

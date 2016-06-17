@@ -56,15 +56,32 @@ typedef struct {
 
 } qhm_solve_status;
 
+/*
+* Switch of progress output, 1 by default.
+*/
 void qhm_progress(int v);
+
+/*
+* Least-Square F0 Adaptive Iteration Refinement(AIR)
+*/
 void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, const char* wtype);
+
+/*
+* Least-Square Sinusoid parameter iteration anaysis.
+*/
 void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, llsm_sinparam* sinu, const char* wtype);
 
+/*
+* QHM iterator functions
+*/
 qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TYPE maxcorr, int nx, int fs, int nhar, char lsmethod);
 void qhm_status_reset(qhm_solve_status* status);
 void qhm_status_free(qhm_solve_status* status);
 int qhm_iter(qhm_solve_status* status);
 
+/*
+* QHM result analysis functions.
+*/
 // work.size == K + 1 * nout
 void qhm_synth(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out, int K, int nout, int fs, double complex* work);
 void qhm_synth_half(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out, int K, int nout, int fs);

@@ -62,11 +62,10 @@ llsm_parameters llsm_init(int nnosband) {
   ret.a_nnosband = nnosband;
   ret.a_nosbandf = calloc(nnosband - 1, sizeof(FP_TYPE));
   ret.a_nosbandf[0] = 2000;
-  ret.a_method = qhm;
+  ret.a_method = qfft;
   ret.a_qhmlsmethod = 'Q'; // use ?gels
   ret.a_maxairiter = 16;
   ret.a_maxqhmiter = 4;
-  ret.a_targetsrer = 30.0;
   ret.a_maxqhmcorr = 20.0;
   for(int i = 1; i < nnosband - 1; i ++) ret.a_nosbandf[i] = ret.a_nosbandf[i - 1] * 2.0;
   ret.s_fs = 0;
