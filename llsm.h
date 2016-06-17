@@ -50,7 +50,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #ifndef LLSM
 #define LLSM
 
-#define FP_TYPE double
+#ifndef FP_TYPE
+  #define FP_TYPE double
+#endif
 
 /*
   llsm_sinparam: model parameters for sinusoidal signals

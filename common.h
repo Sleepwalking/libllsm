@@ -36,7 +36,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include <string.h>
 #include <math.h>
 #include <unistd.h>
-#define FP_TYPE double
+#ifndef FP_TYPE
+  #define FP_TYPE double
+#endif
 
 #ifndef M_PI
   #define M_PI 3.1415926535897932385
