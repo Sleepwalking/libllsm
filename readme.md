@@ -17,6 +17,11 @@ It is designed to be an **interpolatable**, **low-level** speech representation 
 
 License: [UIUC license](https://en.wikipedia.org/wiki/University_of_Illinois/NCSA_Open_Source_License)
 
+Requirement
+---
+A CBLAS and a LAPACKE.
+Tested on reference blas/lapack and OpenBLAS.
+
 Acknowledgement
 ---
 
