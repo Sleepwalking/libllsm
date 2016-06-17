@@ -85,7 +85,7 @@ void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int
       int winlen = (int)(((FP_TYPE)fs) / f0[ihop] * window_periods) * 2 + 1;
       FP_TYPE* a_window = window_func(winlen);
       FP_TYPE* a_frame = fetch_frame(x, nx, ihop * param.a_nhop, winlen);
-      qhm_solve_status *status = qhm_status_init(a_frame, a_window, f0[ihop], param.a_maxqhmcorr, winlen, fs, nhar);
+      qhm_solve_status *status = qhm_status_init(a_frame, a_window, f0[ihop], param.a_maxqhmcorr, winlen, fs, nhar, param.a_qhmlsmethod);
       int info = qhm_iter(status);
       if(info != 0) abort(); // error occurred
 
@@ -179,7 +179,7 @@ void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0,
     int winlen = (int)(((FP_TYPE)fs) / f0[ihop] * window_periods) * 2 + 1;
     FP_TYPE* a_window = window_func(winlen);
     FP_TYPE* a_frame = fetch_frame(x, nx, ihop * param.a_nhop, winlen);
-    qhm_solve_status *status = qhm_status_init(a_frame, a_window, f0[ihop], param.a_maxqhmcorr, winlen, fs, nhar);
+    qhm_solve_status *status = qhm_status_init(a_frame, a_window, f0[ihop], param.a_maxqhmcorr, winlen, fs, nhar, param.a_qhmlsmethod);
     FP_TYPE bestsrer = -INFINITY;
     double complex* bestak = calloc(sizeof(double complex), status->K);
     FP_TYPE* bestfk_hat = calloc(sizeof(FP_TYPE), status->K);
@@ -225,7 +225,7 @@ void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0,
   free(s_window);
 }
 
-qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TYPE maxcorr, int nx, int fs, int nhar) {
+qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TYPE maxcorr, int nx, int fs, int nhar, char lsmethod) {
   qhm_solve_status *status = calloc(sizeof(qhm_solve_status), 1);
 
   status->x = x;
@@ -235,6 +235,7 @@ qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TY
   status->nx = nx;
   status->fs = fs;
   status->nhar = nhar;
+  status->ls_method = lsmethod;
 
   status->K = status->nhar * 2 + 1;
   status->N = (status->nx - 1) / 2;
@@ -324,9 +325,14 @@ int qhm_iter(qhm_solve_status* status) {
   n = 2 * status->K;
   int nrhs = 1;
   double s[2 * status->K];
-  int info = LAPACKE_zgelsd(LAPACK_ROW_MAJOR, m, n, nrhs, status->R, n, status->lstsqb, nrhs, s, -1.0, &rank);
+  int info;
+  if(status->ls_method == 'Q')
+    info = LAPACKE_zgels(LAPACK_ROW_MAJOR, 'N', m, n, nrhs, status->R, n, status->lstsqb, nrhs);
+  else if(status->ls_method == 'S')
+    info = LAPACKE_zgelsd(LAPACK_ROW_MAJOR, m, n, nrhs, status->R, n, status->lstsqb, nrhs, s, -1.0, &rank);
+
   if(info > 0) {
-    fprintf(stderr, "SVD failed to converge.\n");
+    fprintf(stderr, "Least-square calculation failed.\n");
     return info;
   }
   else if(info < 0) {

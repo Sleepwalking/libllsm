@@ -41,6 +41,7 @@ typedef struct {
   FP_TYPE f0;
   FP_TYPE maxcorr; // max correction per step (in Hz)
   int nx, fs, nhar;
+  char ls_method;
 
   // run status
   int K, N; // (nHar * 2 + 1), (nX - 1) / 2
@@ -58,7 +59,7 @@ typedef struct {
 void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, const char* wtype);
 void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, llsm_sinparam* sinu, const char* wtype);
 
-qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TYPE maxcorr, int nx, int fs, int nhar);
+qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TYPE maxcorr, int nx, int fs, int nhar, char lsmethod);
 void qhm_status_reset(qhm_solve_status* status);
 void qhm_status_free(qhm_solve_status* status);
 int qhm_iter(qhm_solve_status* status);

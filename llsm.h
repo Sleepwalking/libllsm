@@ -131,6 +131,7 @@ typedef struct {
   int a_nnosband;       // number of noise bands
 
   llsm_harmonic_analysis_method a_method;
+  int a_qhmlsmethod;
   int a_maxairiter;
   int a_maxqhmiter;
   FP_TYPE a_maxqhmcorr;
