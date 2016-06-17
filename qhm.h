@@ -56,6 +56,7 @@ typedef struct {
 
 } qhm_solve_status;
 
+void qhm_progress(int v);
 void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, const char* wtype);
 void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, llsm_sinparam* sinu, const char* wtype);
 

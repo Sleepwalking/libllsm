@@ -37,6 +37,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
 typedef FP_TYPE*(*window_getter)(int);
 
+static int isshowprogress = 1;
+
+void qhm_progress(int v) {
+  isshowprogress = v;
+}
+
 void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, const char* wtype) {
   double window_periods = 2.5;
   window_getter window_func;
@@ -67,9 +73,20 @@ void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int
   FP_TYPE* srer_work = calloc(sizeof(FP_TYPE), param.a_nhop * 2);
 
   // F0 adaptive iterative refinement
+  int lastoutputed = 0;
+  double sumsrer = 0.0;
+  int nvoiced = 0;
   for(int ihop = 0; ihop < nhop; ++ ihop) {
     if(f0[ihop] <= 0.0) continue;
-    printf("AIR: %d / %d\n", ihop, nhop);
+    ++nvoiced;
+
+    if(isshowprogress) {
+      for(int i = 0; i < lastoutputed; ++ i)
+        printf("\b");
+      lastoutputed = printf("AIR: %d / %d", ihop, nhop);
+      fflush(stdout);
+    }
+
     // get comparison frame
     FP_TYPE* c_frame = fetch_frame(x, nx, ihop * param.a_nhop, param.a_nhop * 2);
     for(int i = 0; i < param.a_nhop * 2; ++ i) {
@@ -125,8 +142,14 @@ void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int
       free(a_frame);
       free(a_window);
     }
-    printf("  SRER: %lf\n", lastsrer);
+    sumsrer += lastsrer;
     free(c_frame);
+  }
+
+  if(isshowprogress) {
+    for(int i = 0; i < lastoutputed; ++ i)
+      printf("\b");
+    printf("AIR finished. Average SRER = %lf.\n", sumsrer / nvoiced);
   }
 
   free(srer_work);
@@ -164,9 +187,20 @@ void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0,
   FP_TYPE* s_range = calloc(sizeof(FP_TYPE), param.a_nhop * 2);
   FP_TYPE* srer_work = calloc(sizeof(FP_TYPE), param.a_nhop * 2);
 
+  int lastoutputed = 0;
+  double sumsrer = 0.0;
+  int nvoiced = 0;
+
   for(int ihop = 0; ihop < nhop; ++ ihop) {
     if(f0[ihop] <= 0.0) continue;
-    printf("QHM: %d / %d\n", ihop, nhop);
+    ++nvoiced;
+
+    if(isshowprogress) {
+      for(int i = 0; i < lastoutputed; ++ i)
+        printf("\b");
+      lastoutputed = printf("QHM: %d / %d", ihop, nhop);
+      fflush(stdout);
+    }
 
     // get comparison frame and analysis frame
     FP_TYPE* c_frame = fetch_frame(x, nx, ihop * param.a_nhop, param.a_nhop * 2);
@@ -209,7 +243,7 @@ void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0,
       abort();
     }
     qhm_harmonic_parameter_from_ak(bestak, bestfk_hat, status->K, param.a_nhar, sinu -> freq[ihop], sinu -> ampl[ihop], sinu -> phse[ihop]);
-    printf("  SRER: %lf\n", bestsrer);
+    sumsrer += bestsrer;
 
     free(bestfk_hat);
     free(bestak);
@@ -217,6 +251,12 @@ void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0,
     free(a_frame);
     free(a_window);
     free(c_frame);
+  }
+
+  if(isshowprogress) {
+    for(int i = 0; i < lastoutputed; ++ i)
+      printf("\b");
+    printf("QHM finished. Average SRER = %lf.\n", sumsrer / nvoiced);
   }
 
   free(srer_work);
