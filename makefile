@@ -1,7 +1,7 @@
 export FP_TYPE ?= double
 CC ?= cc
 LINK ?= cc
-LDFLAGS += -fopenmp -llapack -lcblas -lm
+LDFLAGS += -fopenmp -llapacke -llapack -lcblas -lm
 AR = ar
 CFLAGS = -Ofast -std=c99 -Wall -fPIC -fopenmp -DFP_TYPE=$(FP_TYPE)
 ARFLAGS = -rv
