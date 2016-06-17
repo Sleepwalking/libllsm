@@ -330,6 +330,10 @@ int qhm_iter(qhm_solve_status* status) {
     info = LAPACKE_zgels(LAPACK_ROW_MAJOR, 'N', m, n, nrhs, status->R, n, status->lstsqb, nrhs);
   else if(status->ls_method == 'S')
     info = LAPACKE_zgelsd(LAPACK_ROW_MAJOR, m, n, nrhs, status->R, n, status->lstsqb, nrhs, s, -1.0, &rank);
+  else {
+    fprintf(stderr, "Invalid ls_method.\n");
+    abort();
+  }
 
   if(info > 0) {
     fprintf(stderr, "Least-square calculation failed.\n");
