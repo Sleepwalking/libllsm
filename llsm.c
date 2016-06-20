@@ -62,8 +62,8 @@ llsm_parameters llsm_init(int nnosband) {
   ret.a_nnosband = nnosband;
   ret.a_nosbandf = calloc(nnosband - 1, sizeof(FP_TYPE));
   ret.a_nosbandf[0] = 2000;
-  ret.a_method = qfft;
-  ret.a_qhmlsmethod = 'Q'; // use ?gels
+  ret.a_hamethod = LLSM_HAMETHOD_QFFT;
+  ret.a_qhmlsmethod = QHM_LSMETHOD_QR;
   ret.a_maxairiter = 16;
   ret.a_maxqhmiter = 4;
   ret.a_maxqhmcorr = 20.0;
@@ -529,7 +529,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   FP_TYPE* tmpampl = calloc(nf0, sizeof(FP_TYPE));
   FP_TYPE* tmpphse = calloc(nf0, sizeof(FP_TYPE));
 
-  if(param.a_method == qfft) {
+  if(param.a_hamethod == LLSM_HAMETHOD_QFFT) {
     for(int i = 0; i < param.a_nhar; i ++) {
       find_harmonic_trajectory(param, spectrogram, phasegram, nfft, fs, rf0, nf0, i + 1, tmpfreq, tmpampl, tmpphse);
       for(int j = 0; j < nf0; j ++) {
@@ -548,12 +548,12 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
         }
     }
   }
-  else if(param.a_method == qhm) {
+  else if(param.a_hamethod == LLSM_HAMETHOD_QHM) {
     qhm_air(param, x, nx, fs, rf0, nf0, "blackman");
     qhm_analyze(param, x, nx, fs, rf0, nf0, model -> sinu, "blackman");
   }
   else {
-    fprintf(stderr, "Invalid parameter->a_method. Aborting...\n");
+    fprintf(stderr, "Invalid parameter 'a_hamethod'. Aborting...\n");
     abort();
   }
 
@@ -580,7 +580,7 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
   // C7
   for(int i = 0; i < nx; i ++)
     resynth[i] = x[i] - resynth[i];
-  wavwrite(resynth, nx, fs, 16, "noise.wav");
+  // wavwrite(resynth, nx, fs, 16, "noise.wav");
 
   // C21
   FP_TYPE** noise_spectrogram = (FP_TYPE**)malloc2d(nf0, nfft / 2, sizeof(FP_TYPE));

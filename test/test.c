@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
   //lparam.a_nnos = 128;
   lparam.a_nosf = 16000;
   lparam.a_nhop = pow(2, ceil(log2(fs * 0.005)));
-  lparam.a_method = qhm;
+  lparam.a_hamethod = LLSM_HAMETHOD_QHM;
   qhm_progress(1);
   printf("Analyzing...\n");
   llsm* model = llsm_analyze(lparam, x, nx, fs, f0, nfrm);

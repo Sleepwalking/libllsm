@@ -54,6 +54,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
   #define FP_TYPE double
 #endif
 
+#define LLSM_HAMETHOD_QFFT 0
+#define LLSM_HAMETHOD_QHM 1
+
 /*
   llsm_sinparam: model parameters for sinusoidal signals
 */
@@ -112,11 +115,6 @@ typedef struct {
     analysis/synthesis processes. We name so to make it consistent with libpyin (see pyin_paramters).
 */
 
-typedef enum {
-  qfft = 0, // use fft spectrum peak picking on quasi-harmonic analysis
-  qhm // use Least-Square
-} llsm_harmonic_analysis_method;
-
 typedef struct {
   // params for analysis
   int a_nhop;           // hop size in samples
@@ -130,11 +128,11 @@ typedef struct {
   FP_TYPE* a_nosbandf;  // upper frequency of each noise band
   int a_nnosband;       // number of noise bands
 
-  llsm_harmonic_analysis_method a_method; // method of quasi-harmonic analysis, qfft by default
-  char a_qhmlsmethod; // method of LS. 'Q' remains QR/LR(faster). 'S' remains SVD(better quality, very slow).
+  int a_hamethod; // method of quasi-harmonic analysis, LLSM_HAMETHOD_QFFT by default
+  int a_qhmlsmethod; // method of LS, QHM_LSMETHOD_QR by default
   int a_maxairiter;  // maximum number of air iteration, 16 by default
   int a_maxqhmiter; // maximum number of qhm iteration, 4 by default
-  FP_TYPE a_maxqhmcorr; // maximum frequency correction per iteration(in Hz)
+  FP_TYPE a_maxqhmcorr; // maximum frequency correction per iteration(in Hz), 20.0 by default
 
   // params for synthesis
   int s_fs;             // sampling frequency

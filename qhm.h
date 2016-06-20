@@ -34,6 +34,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include "llsm.h"
 #include "complex.h"
 
+#define QHM_LSMETHOD_QR 0
+#define QHM_LSMETHOD_SVD 1
+
 typedef struct {
   FP_TYPE* x; // original signal. shape = (nX, 1)
   FP_TYPE* window; // shape = (nX, 1)
@@ -41,7 +44,7 @@ typedef struct {
   FP_TYPE f0;
   FP_TYPE maxcorr; // max correction per step (in Hz)
   int nx, fs, nhar;
-  char ls_method;
+  int ls_method;
 
   // run status
   int K, N; // (nHar * 2 + 1), (nX - 1) / 2
@@ -49,10 +52,10 @@ typedef struct {
   FP_TYPE* n; // time vec. (1, nX)
   FP_TYPE* t; // arg of cplx exp, (K, 2N + 1)
   double complex* Ea; // matrix with cplx exp, (2K, 2N + 1)
-  double complex* Ew; // E multiply the window, (2N + 1, 2K)
-  double complex* R; // E multiply the window, (2K, 2K);
+  double complex* Ew; // E multiply by the window, (2N + 1, 2K)
+  double complex* R; // E multiply by the window, (2K, 2K)
   double complex* windowed_x; // (nX, 1)
-  double complex* lstsqb; // (2 * K, 1), contains ak and bk(outputs)
+  double complex* lstsqb; // (2 * K, 1), contains ak and bk
 
 } qhm_solve_status;
 
@@ -64,32 +67,38 @@ void qhm_progress(int v);
 /*
 * Least-Square F0 Adaptive Iteration Refinement(AIR)
 */
-void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, const char* wtype);
+void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs,
+  FP_TYPE* f0, int nhop, const char* wtype);
 
 /*
 * Least-Square Sinusoid parameter iteration anaysis.
 */
-void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop, llsm_sinparam* sinu, const char* wtype);
+void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop,
+  llsm_sinparam* sinu, const char* wtype);
 
 /*
 * QHM iterator functions
 */
-qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TYPE maxcorr, int nx, int fs, int nhar, char lsmethod);
+qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TYPE maxcorr,
+  int nx, int fs, int nhar, int lsmethod);
 void qhm_status_reset(qhm_solve_status* status);
-void qhm_status_free(qhm_solve_status* status);
+void delete_qhm_status(qhm_solve_status* status);
 int qhm_iter(qhm_solve_status* status);
 
 /*
 * QHM result analysis functions.
 */
 // work.size == K + 1 * nout
-void qhm_synth(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out, int K, int nout, int fs, double complex* work);
-void qhm_synth_half(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out, int K, int nout, int fs);
+void qhm_synth(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out,
+  int K, int nout, int fs, double complex* work);
+void qhm_synth_half(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out,
+  int K, int nout, int fs);
 
 FP_TYPE qhm_stdev(FP_TYPE* x, int n);
 // work.shape == (n)
 FP_TYPE qhm_calc_srer(FP_TYPE* x, FP_TYPE* y, int n, FP_TYPE* work);
 
-void qhm_harmonic_parameter_from_ak(double complex* ak, FP_TYPE* fk_hat, int K, int nhar, FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse);
+void qhm_harmonic_parameter_from_ak(double complex* ak, FP_TYPE* fk_hat, int K, int nhar,
+  FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse);
 
 #endif // QHM
