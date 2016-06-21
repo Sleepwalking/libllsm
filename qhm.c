@@ -43,6 +43,7 @@ void qhm_progress(int v) {
   show_progress = v;
 }
 
+#ifdef ENABLE_QHM
 void qhm_air(llsm_parameters param, FP_TYPE* x,
   int nx, int fs, FP_TYPE* f0, int nhop, const char* wtype) {
 
@@ -111,7 +112,7 @@ void qhm_air(llsm_parameters param, FP_TYPE* x,
         status -> K, param.a_nhop * 2, fs, s_work);
       for(int i = 0; i < param.a_nhop * 2; i ++)
         s_frame[i] *= s_window[i];
-      FP_TYPE currsrer = qhm_calc_srer(c_frame, s_frame, param.a_nhop * 2, srer_work);
+      FP_TYPE currsrer = llsm_calc_srer(c_frame, s_frame, param.a_nhop * 2, srer_work);
 
       // update f0
       if(currsrer > lastsrer) {
@@ -128,7 +129,7 @@ void qhm_air(llsm_parameters param, FP_TYPE* x,
         if(currsrer > lastsrer)
           lastsrer = currsrer;
         free(s_work);
-        delete_status_free(status);
+        delete_qhm_status(status);
         free(a_frame);
         free(a_window);
         break;
@@ -138,7 +139,7 @@ void qhm_air(llsm_parameters param, FP_TYPE* x,
         lastsrer = currsrer;
 
       free(s_work);
-      delete_status_free(status);
+      delete_qhm_status(status);
       free(a_frame);
       free(a_window);
     }
@@ -228,7 +229,7 @@ void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs,
         status -> K, param.a_nhop * 2, fs);
       for(int i = 0; i < param.a_nhop * 2; i ++)
         s_frame[i] *= s_window[i];
-      FP_TYPE currsrer = qhm_calc_srer(c_frame, s_frame, param.a_nhop * 2, srer_work);
+      FP_TYPE currsrer = llsm_calc_srer(c_frame, s_frame, param.a_nhop * 2, srer_work);
       // check whether update bestak
       if(currsrer > bestsrer) {
         bestsrer = currsrer;
@@ -248,7 +249,7 @@ void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs,
 
     free(bestfk_hat);
     free(bestak);
-    delete_status_free(status);
+    delete_qhm_status(status);
     free(a_frame);
     free(a_window);
     free(c_frame);
@@ -303,7 +304,7 @@ void qhm_status_reset(qhm_solve_status* status) {
     status -> n[i + status -> N] = (FP_TYPE)i;
 }
 
-void delete_status_free(qhm_solve_status* status) {
+void delete_qhm_status(qhm_solve_status* status) {
   free(status -> fk_hat);
   free(status -> n);
   free(status -> t);
@@ -401,7 +402,6 @@ int qhm_iter(qhm_solve_status* status) {
     else if(delta < -status -> maxcorr) delta = -status -> maxcorr;
     status -> fk_hat[i] += delta;
   }
-
   return 0;
 }
 
@@ -443,32 +443,6 @@ void qhm_synth(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE
   if(needfree) free(work);
 }
 
-FP_TYPE qhm_stdev(FP_TYPE* x, int n) {
-  FP_TYPE mean = sumfp(x, n) / n;
-  FP_TYPE sum_deviation = 0.0;
-  for(int i = 0; i < n; i ++)
-    sum_deviation += (x[i] - mean) * (x[i] - mean);
-  return sqrt(sum_deviation / n);
-}
-
-FP_TYPE qhm_calc_srer(FP_TYPE* x, FP_TYPE* y, int n, FP_TYPE* work) {
-  int needfree = 0;
-  if(work == NULL) {
-    work = calloc(sizeof(FP_TYPE), n);
-    needfree = 1;
-  }
-
-  for(int i = 0; i < n; i ++)
-    work[i] = x[i] - y[i];
-
-  FP_TYPE orig_stdev = qhm_stdev(x, n);
-  FP_TYPE delta_stdev = qhm_stdev(work, n);
-
-  if(needfree) free(work);
-
-  return log10(orig_stdev / delta_stdev) * 20.0;
-}
-
 void qhm_synth_half(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange,
   FP_TYPE* out, int K, int nout, int fs) {
 
@@ -502,3 +476,53 @@ void qhm_harmonic_parameter_from_ak(double complex* ak, FP_TYPE* fk_hat, int K, 
     phse[i] = phse_[i];
   free(phse_);
 }
+#else // ENABLE_QHM
+// stubs for ABI compatibility
+static void stub_func() {
+  fprintf(stderr, "\nThis libllsm doesn't support LLSM_HAMETHOD_QHM. Aborting...\n");
+  abort();
+}
+
+void qhm_air(llsm_parameters param, FP_TYPE* x, int nx, int fs,
+  FP_TYPE* f0, int nhop, const char* wtype) {
+  stub_func();
+}
+
+void qhm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f0, int nhop,
+  llsm_sinparam* sinu, const char* wtype) {
+  stub_func();
+}
+
+qhm_solve_status* qhm_status_init(FP_TYPE* x, FP_TYPE* window, FP_TYPE f0, FP_TYPE maxcorr,
+  int nx, int fs, int nhar, int lsmethod) {
+  stub_func();
+  return NULL;
+}
+
+void qhm_status_reset(qhm_solve_status* status) {
+  stub_func();
+}
+
+void delete_qhm_status(qhm_solve_status* status) {
+  stub_func();
+}
+
+int qhm_iter(qhm_solve_status* status) {
+  stub_func();
+  return 1;
+}
+
+void qhm_synth(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out,
+  int K, int nout, int fs, double complex* work) {
+  stub_func();
+}
+void qhm_synth_half(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out,
+  int K, int nout, int fs) {
+  stub_func();
+}
+
+void qhm_harmonic_parameter_from_ak(double complex* ak, FP_TYPE* fk_hat, int K, int nhar,
+  FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse) {
+  stub_func();
+}
+#endif // ENABLE_QHM

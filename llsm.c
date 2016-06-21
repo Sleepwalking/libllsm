@@ -547,13 +547,18 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
             rf0[j] = avg_f0;
         }
     }
-  }
-  else if(param.a_hamethod == LLSM_HAMETHOD_QHM) {
+  } else if(param.a_hamethod == LLSM_HAMETHOD_QHM) {
+    #ifdef ENABLE_QHM
     qhm_air(param, x, nx, fs, rf0, nf0, "blackman");
     qhm_analyze(param, x, nx, fs, rf0, nf0, model -> sinu, "blackman");
-  }
-  else {
-    fprintf(stderr, "Invalid parameter 'a_hamethod'. Aborting...\n");
+    #else
+    fprintf(stderr, "\nThis libllsm doesn't support LLSM_HAMETHOD_QHM.\n\
+Please rebuild with 'make ENABLE_QHM=1'.\n\
+Aborting....\n");
+    abort();
+    #endif
+  } else {
+    fprintf(stderr, "Invalid 'a_hamethod'. Aborting...\n");
     abort();
   }
 
@@ -865,4 +870,15 @@ FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny) {
 
   free(ola_window);
   return y_sin;
+}
+
+int is_hamethod_supported(int method) {
+  if(method == LLSM_HAMETHOD_QFFT)
+    return 1;
+  #ifdef ENABLE_QHM
+  else if(method == LLSM_HAMETHOD_QHM)
+    return 1;
+  #endif
+  else
+    return 0;
 }

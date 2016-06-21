@@ -153,4 +153,9 @@ llsm* llsm_analyze(llsm_parameters param, FP_TYPE* x, int nx, int fs, FP_TYPE* f
 FP_TYPE* llsm_synthesize(llsm_parameters param, llsm* model, int* ny);
 void llsm_delete(llsm* model);
 
+/*
+  check if a given harmonic analysis method is supported.
+*/
+int is_hamethod_supported(int method);
+
 #endif

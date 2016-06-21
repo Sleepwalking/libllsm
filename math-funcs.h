@@ -145,6 +145,9 @@ FP_TYPE* llsm_convolution(FP_TYPE* x, FP_TYPE* h, int nx, int nh);
 FP_TYPE* llsm_filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx);
 FP_TYPE* llsm_chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, char* type);
 FP_TYPE* llsm_interp(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx);
+FP_TYPE llsm_stdev(FP_TYPE* x, int n);
+// length of 'work' array is n
+FP_TYPE llsm_calc_srer(FP_TYPE* x, FP_TYPE* y, int n, FP_TYPE* work);
 
 static inline double fastatan2(double y, double x) {
   double coeff_1 = M_PI / 4.0;

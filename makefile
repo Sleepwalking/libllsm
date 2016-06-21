@@ -1,17 +1,24 @@
 export FP_TYPE ?= double
 CC ?= cc
 LINK ?= cc
-LDFLAGS += -fopenmp -llapacke -llapack -lcblas -lm
+LDFLAGS += -fopenmp -lm
 AR = ar
-CFLAGS = -Ofast -std=c99 -Wall -fPIC -fopenmp -DFP_TYPE=$(FP_TYPE)
+CFLAGS += -Ofast -std=c99 -Wall -fPIC -fopenmp -DFP_TYPE=$(FP_TYPE)
 ARFLAGS = -rv
 OUT_DIR = ./build
 OBJS = $(OUT_DIR)/fftsg_h.o $(OUT_DIR)/math-funcs.o $(OUT_DIR)/llsm.o $(OUT_DIR)/envelope.o $(OUT_DIR)/qhm.o
 LIBS =
 LIBPYIN = external/libpyin
 LIBGVPS = $(LIBPYIN)/external/libgvps
+ENABLE_QHM ?= 1
+
+ifeq ($(ENABLE_QHM),1)
+	CFLAGS += -DENABLE_QHM -Wno-incompatible-pointer-types
+	LDFLAGS += -llapacke -llapack -lcblas
+endif
 
 default: $(OUT_DIR)/libllsm.a
+
 test: $(OUT_DIR)/llsm-test
 	$(OUT_DIR)/llsm-test test/arctic_a0001.wav
 testapprox: $(OUT_DIR)/check-approx

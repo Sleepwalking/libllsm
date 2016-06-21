@@ -94,10 +94,6 @@ void qhm_synth(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE
 void qhm_synth_half(double complex* ak, FP_TYPE* fk_hat, FP_TYPE* synthrange, FP_TYPE* out,
   int K, int nout, int fs);
 
-FP_TYPE qhm_stdev(FP_TYPE* x, int n);
-// work.shape == (n)
-FP_TYPE qhm_calc_srer(FP_TYPE* x, FP_TYPE* y, int n, FP_TYPE* work);
-
 void qhm_harmonic_parameter_from_ak(double complex* ak, FP_TYPE* fk_hat, int K, int nhar,
   FP_TYPE* freq, FP_TYPE* ampl, FP_TYPE* phse);
 
