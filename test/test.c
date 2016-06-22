@@ -37,6 +37,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #include "../external/libpyin/pyin.h"
 #include "../math-funcs.h"
 #include "../llsm.h"
+#include "../qhm.h"
 
 double get_time() {
   struct timeval t;
@@ -49,7 +50,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Missing argument.\n");
     return 1;
   }
-  
+
   int fs = 0;
   int nbit = 0;
   int nx = 0;
@@ -66,7 +67,7 @@ int main(int argc, char** argv) {
   param.trange = 24;
   param.nf = ceil(fs * 0.025);
   param.w = param.nf / 4;
-  
+
   int nfrm = 0;
   double* f0 = pyin_analyze(param, x, nx, fs, & nfrm);
 
@@ -78,18 +79,23 @@ int main(int argc, char** argv) {
   //lparam.a_nnos = 128;
   lparam.a_nosf = 16000;
   lparam.a_nhop = pow(2, ceil(log2(fs * 0.005)));
+  if(is_hamethod_supported(LLSM_HAMETHOD_QHM)) {
+    lparam.a_hamethod = LLSM_HAMETHOD_QHM;
+    qhm_progress(1);
+  } else
+    lparam.a_hamethod = LLSM_HAMETHOD_QFFT;
   printf("Analyzing...\n");
   llsm* model = llsm_analyze(lparam, x, nx, fs, f0, nfrm);
 
   lparam.s_fs = fs;
-  
+
   printf("Synthesizing...\n");
   double t0 = get_time();
   int ny;
   double* y = llsm_synthesize(lparam, model, & ny);
   double tspent = get_time() - t0;
   printf("%f ms, %fs/s\n", tspent, (double)nx / fs / tspent * 1000);
-  
+
   wavwrite(y, ny, lparam.s_fs, 16, "resynth.wav");
 
   llsm_deinit(lparam);
@@ -100,4 +106,3 @@ int main(int argc, char** argv) {
 
   return 0;
 }
-

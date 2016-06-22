@@ -32,8 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 /*
   matlab-style frequency maps [0, 1] onto [0 fs/2] Hz
   llsm-style frequency maps [0, 1] onto [0 fs] Hz even though (0.5, 1] is above nyquist frequency
-  
-  All inline functions are in matlab-style; all functions beginning with llsm prefix are llsm-style.
+
+  All static inline functions are in matlab-style; all functions beginning with llsm prefix are llsm-style.
 */
 
 #ifndef LLSM_MFUNCS
@@ -69,7 +69,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 #define atan2_1 fastatan2
 
 #define def_singlepass(name, op, init) \
-inline FP_TYPE name(FP_TYPE* src, int n) { \
+static inline FP_TYPE name(FP_TYPE* src, int n) { \
   FP_TYPE ret = init; \
   for(int i = 0; i < n; i ++) \
     ret = op(ret, src[i]); \
@@ -84,35 +84,35 @@ def_singlepass(sumfp, def_add, 0)
 def_singlepass(maxfp, def_max, src[0])
 def_singlepass(minfp, def_min, src[0])
 
-inline FP_TYPE* boxcar(int n) {
+static inline FP_TYPE* boxcar(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
     ret[i] = 1.0;
   return ret;
 }
 
-inline FP_TYPE* hanning(int n) {
+static inline FP_TYPE* hanning(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
     ret[i] = 0.5 * (1 - cos_3(2 * M_PI * i / (n - 1)));
   return ret;
 }
 
-inline FP_TYPE* hamming(int n) {
+static inline FP_TYPE* hamming(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
     ret[i] = 0.54 - 0.46 * cos_3(2 * M_PI * i / (n - 1));
   return ret;
 }
 
-inline FP_TYPE* mltsine(int n) {
+static inline FP_TYPE* mltsine(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
     ret[i] = sin_3(M_PI / n * (i + 0.5));
   return ret;
 }
 
-inline FP_TYPE* blackman_harris(int n) {
+static inline FP_TYPE* blackman_harris(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   const FP_TYPE a0 = 0.35875;
   const FP_TYPE a1 = 0.48829;
@@ -125,7 +125,7 @@ inline FP_TYPE* blackman_harris(int n) {
   return ret;
 }
 
-inline FP_TYPE* blackman(int n) {
+static inline FP_TYPE* blackman(int n) {
   FP_TYPE* ret = calloc(n, sizeof(FP_TYPE));
   const FP_TYPE a0 = 0.42;
   const FP_TYPE a1 = 0.5;
@@ -145,8 +145,11 @@ FP_TYPE* llsm_convolution(FP_TYPE* x, FP_TYPE* h, int nx, int nh);
 FP_TYPE* llsm_filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx);
 FP_TYPE* llsm_chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, char* type);
 FP_TYPE* llsm_interp(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx);
+FP_TYPE llsm_stdev(FP_TYPE* x, int n);
+// length of 'work' array is n
+FP_TYPE llsm_calc_srer(FP_TYPE* x, FP_TYPE* y, int n, FP_TYPE* work);
 
-inline double fastatan2(double y, double x) {
+static inline double fastatan2(double y, double x) {
   double coeff_1 = M_PI / 4.0;
   double coeff_2 = 3.0 * coeff_1;
   double abs_y = fabs(y) + 1e-10; // kludge to prevent 0/0 condition
@@ -164,7 +167,7 @@ inline double fastatan2(double y, double x) {
    return angle;
 }
 
-inline void fft_core(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, FP_TYPE* buffer, FP_TYPE mode) {
+static inline void fft_core(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, FP_TYPE* buffer, FP_TYPE mode) {
   for(int i = 0; i < n; i ++) {
     buffer[i * 2] = xr == NULL ? 0 : xr[i];
     buffer[i * 2 + 1] = xi == NULL ? 0 : xi[i];
@@ -182,19 +185,19 @@ inline void fft_core(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, 
     }
 }
 
-inline void fft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, FP_TYPE* buffer) {
+static inline void fft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, FP_TYPE* buffer) {
   fft_core(xr, xi, yr, yi, n, buffer, -1.0);
 }
 
-inline void ifft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, FP_TYPE* buffer) {
+static inline void ifft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n, FP_TYPE* buffer) {
   fft_core(xr, xi, yr, yi, n, buffer, 1.0);
 }
 
-inline void idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n) {
+static inline void idft(FP_TYPE* xr, FP_TYPE* xi, FP_TYPE* yr, FP_TYPE* yi, int n) {
   llsm_idft(xr, xi, yr, yi, n);
 }
 
-inline FP_TYPE* fftshift(FP_TYPE* x, int n) {
+static inline FP_TYPE* fftshift(FP_TYPE* x, int n) {
   FP_TYPE* y = calloc(n, sizeof(FP_TYPE));
   int halfs = n / 2;
   int halfl = (n + 1) / 2;
@@ -205,7 +208,7 @@ inline FP_TYPE* fftshift(FP_TYPE* x, int n) {
   return y;
 }
 
-inline FP_TYPE* unwrap(FP_TYPE* x, int n) {
+static inline FP_TYPE* unwrap(FP_TYPE* x, int n) {
   FP_TYPE* y = calloc(n, sizeof(FP_TYPE));
   y[0] = x[0];
   for(int i = 1; i < n; i ++) {
@@ -217,74 +220,74 @@ inline FP_TYPE* unwrap(FP_TYPE* x, int n) {
   return y;
 }
 
-inline FP_TYPE* abscplx(FP_TYPE* xr, FP_TYPE* xi, int n) {
+static inline FP_TYPE* abscplx(FP_TYPE* xr, FP_TYPE* xi, int n) {
   FP_TYPE* y = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
     y[i] = sqrt(xr[i] * xr[i] + xi[i] * xi[i]);
   return y;
 }
 
-inline FP_TYPE* argcplx(FP_TYPE* xr, FP_TYPE* xi, int n) {
+static inline FP_TYPE* argcplx(FP_TYPE* xr, FP_TYPE* xi, int n) {
   FP_TYPE* y = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
     y[i] = atan2_3(xi[i], xr[i]);
   return y;
 }
 
-inline FP_TYPE linterp(FP_TYPE v1, FP_TYPE v2, FP_TYPE ratio) {
+static inline FP_TYPE linterp(FP_TYPE v1, FP_TYPE v2, FP_TYPE ratio) {
     return v1 + (v2 - v1) * ratio;
 }
 
-inline void complete_symm(FP_TYPE* x, int n) {
+static inline void complete_symm(FP_TYPE* x, int n) {
   if(n / 2 == (n + 1) / 2) // even
     x[n / 2] = x[n / 2 - 1];
   for(int i = n / 2 + 1; i < n; i ++)
     x[i] = x[n - i];
 }
 
-inline void complete_asymm(FP_TYPE* x, int n) {
+static inline void complete_asymm(FP_TYPE* x, int n) {
   if(n / 2 == (n + 1) / 2) // even
     x[n / 2] = x[n / 2 - 1];
   for(int i = n / 2 + 1; i < n; i ++)
     x[i] = -x[n - i];
 }
 
-inline FP_TYPE* fir1(int order, FP_TYPE cutoff, char* type, char* window) {
+static inline FP_TYPE* fir1(int order, FP_TYPE cutoff, char* type, char* window) {
   return llsm_winfir(order, cutoff / 2.0, 0, type, window);
 }
 
-inline FP_TYPE* fir1bp(int order, FP_TYPE cutoff_low, FP_TYPE cutoff_high, char* window) {
+static inline FP_TYPE* fir1bp(int order, FP_TYPE cutoff_low, FP_TYPE cutoff_high, char* window) {
   return llsm_winfir(order, cutoff_low / 2.0, cutoff_high / 2.0, "bandpass", window);
 }
 
-inline int cheby1_fixed(FP_TYPE cutoff, char* type, FP_TYPE** a, FP_TYPE** b) {
+static inline int cheby1_fixed(FP_TYPE cutoff, char* type, FP_TYPE** a, FP_TYPE** b) {
   return llsm_get_iir_filter(cutoff / 2.0, type, a, b);
 }
 
-inline FP_TYPE* conv(FP_TYPE* x, FP_TYPE* h, int nx, int nh) {
+static inline FP_TYPE* conv(FP_TYPE* x, FP_TYPE* h, int nx, int nh) {
   return llsm_convolution(x, h, nx, nh);
 }
 
-inline FP_TYPE* filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx) {
+static inline FP_TYPE* filter(FP_TYPE* b, int nb, FP_TYPE* a, int na, FP_TYPE* x, int nx) {
   return llsm_filter(b, nb, a, na, x, nx);
 }
 
-inline FP_TYPE* chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, char* type) {
+static inline FP_TYPE* chebyfilt(FP_TYPE* x, int nx, FP_TYPE cutoff1, FP_TYPE cutoff2, char* type) {
   return llsm_chebyfilt(x, nx, cutoff1 / 2.0, cutoff2 / 2.0, type);
 }
 
-inline FP_TYPE* interp1(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx) {
+static inline FP_TYPE* interp1(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx) {
   return llsm_interp(xi, yi, ni, x, nx);
 }
 
-inline FP_TYPE* white_noise(FP_TYPE amplitude, int n) {
+static inline FP_TYPE* white_noise(FP_TYPE amplitude, int n) {
   FP_TYPE* y = calloc(n, sizeof(FP_TYPE));
   for(int i = 0; i < n; i ++)
     y[i] = ((FP_TYPE)rand() / RAND_MAX - 0.5) * amplitude * 2.0;
   return y;
 }
 
-inline FP_TYPE* moving_avg(FP_TYPE* x, int nx, int order) {
+static inline FP_TYPE* moving_avg(FP_TYPE* x, int nx, int order) {
   FP_TYPE* h = boxcar(order);
   for(int i = 0; i < order; i ++) h[i] /= order;
   FP_TYPE* y = conv(x, h, nx, order);
@@ -293,4 +296,3 @@ inline FP_TYPE* moving_avg(FP_TYPE* x, int nx, int order) {
 }
 
 #endif
-

@@ -17,6 +17,10 @@ It is designed to be an **interpolatable**, **low-level** speech representation 
 
 License: [UIUC license](https://en.wikipedia.org/wiki/University_of_Illinois/NCSA_Open_Source_License)
 
+Requirement
+---
+A CBLAS-compatible and a LAPACKE-compatible library.
+
 Acknowledgement
 ---
 
@@ -35,3 +39,6 @@ Works cited
 
 * Stylianou, Yannis. "Harmonic plus noise models for speech, combined with statistical methods, for speech and speaker modification." Diss. Ecole Nationale Supérieure des Télécommunications. 1996.
 
+* Pantazis, Yannis, Olivier Rosec, and Yannis Stylianou. "Iterative estimation of sinusoidal signal parameters." IEEE Signal Processing Letters 17.5 (2010): 461-464.
+
+* Degottex, Gilles, and Yannis Stylianou. "Analysis and synthesis of speech using an adaptive full-band harmonic model." IEEE Transactions on Audio, Speech, and Language Processing 21.10 (2013): 2085-2095.

@@ -79,7 +79,7 @@ FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, FP_TYPE cutoff2, char* type, cha
     w = hamming(order);
   else if(! strcmp(window, "blackman_harris"))
     w = blackman_harris(order);
-  
+
   if(! strcmp(type, "lowpass")) {
     for(int i = 0; i <= floor(cutk); i ++)
       freqrsp[i] = 1;
@@ -93,16 +93,16 @@ FP_TYPE* llsm_winfir(int order, FP_TYPE cutoff, FP_TYPE cutoff2, char* type, cha
   if(! strcmp(type, "bandpass")) {
     for(int i = floor(cutk2); i > floor(cutk); i --)
       freqrsp[i] = 1;
-    freqrsp[(int)floor(cutk)] = 1.0 - fmod(cutk, 1.0);    
+    freqrsp[(int)floor(cutk)] = 1.0 - fmod(cutk, 1.0);
     freqrsp[(int)ceil(cutk2)] = fmod(cutk2, 1.0);
   }
-  
+
   complete_symm(freqrsp, order);
   idft(freqrsp, NULL, timersp, NULL, order);
   FP_TYPE* h = fftshift(timersp, order);
   for(int i = 0; i < order; i ++)
     h[i] *= w[i];
-  
+
   free(w);
   free(freqrsp);
   free(timersp);
@@ -215,3 +215,28 @@ FP_TYPE* llsm_interp(FP_TYPE* xi, FP_TYPE* yi, int ni, FP_TYPE* x, int nx) {
   return y;
 }
 
+FP_TYPE llsm_stdev(FP_TYPE* x, int n) {
+  FP_TYPE mean = sumfp(x, n) / n;
+  FP_TYPE sum_deviation = 0.0;
+  for(int i = 0; i < n; i ++)
+    sum_deviation += (x[i] - mean) * (x[i] - mean);
+  return sqrt(sum_deviation / n);
+}
+
+FP_TYPE llsm_calc_srer(FP_TYPE* x, FP_TYPE* y, int n, FP_TYPE* work) {
+  int needfree = 0;
+  if(work == NULL) {
+    work = calloc(sizeof(FP_TYPE), n);
+    needfree = 1;
+  }
+
+  for(int i = 0; i < n; i ++)
+    work[i] = x[i] - y[i];
+
+  FP_TYPE orig_stdev = llsm_stdev(x, n);
+  FP_TYPE delta_stdev = llsm_stdev(work, n);
+
+  if(needfree) free(work);
+
+  return log10(orig_stdev / delta_stdev) * 20.0;
+}
