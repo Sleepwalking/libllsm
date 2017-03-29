@@ -1,3 +1,0 @@
-[submodule "external/libpyin"]
-	path = external/libpyin
-	url = https://github.com/Sleepwalking/libpyin.git
