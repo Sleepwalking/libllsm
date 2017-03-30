@@ -130,7 +130,7 @@ Please contact the author for an alternatively licensed version primarily for co
 Publications
 ---
 
-Currently there's no publication directly associated with LLSM. However there is [a poster](https://khua5.web.engr.illinois.edu/writings/hua-spcc-poster.pdf) on the pseudo glottal inverse filtering method in layer 1 LLSM.
+Currently there's no publication directly associated with LLSM. However there is [a poster](http://khua5.web.engr.illinois.edu/writings/hua-spcc-poster.pdf) on the pseudo glottal inverse filtering method in layer 1 LLSM.
 
 K. Hua, "Speech Analysis/Synthesis by Non-parametric Separation of Vocal Source and Tract Responses," presented at Speech Processing Courses in Crete, 2016.
 
