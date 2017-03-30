@@ -18,8 +18,9 @@ Compiling
 ---
 
 1. `mkdir external build`
-2. create symbolic link to [libpyin](https://github.com/Sleepwalking/libpyin) under `external`
-3. run `make`, `make test`
+2. create a symbolic link to [libpyin](https://github.com/Sleepwalking/libpyin) under `external`
+3. create a symbolic link to [ciglet](https://github.com/Sleepwalking/ciglet)/single-file under `external` (you need to run `make single-file` in ciglet first)
+4. run `make`, `make test`
 
 Note: there's a macro named `FP_TYPE`, which is either float or double, that has to be specified as a complier flag (i.e., `-DFP_TYPE=float`).
 
