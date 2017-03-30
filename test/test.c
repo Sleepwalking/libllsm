@@ -103,7 +103,6 @@ int main(int argc, char** argv) {
 
   printf("\nModifying...\n");
   FP_TYPE* faxis = llsm_uniform_faxis(2048, lparam.a_nosf * 2);
-  FP_TYPE* freqwarp = llsm_warp_freq(0, lparam.a_nosf, lparam.a_nnos, lparam.a_noswarp);
   for(int i = 0; i < model -> conf.nfrm; i ++) {
     llsm_frame* iframe = model -> frames[i];
     if(iframe -> f0 <= 0) continue;
@@ -111,7 +110,6 @@ int main(int argc, char** argv) {
     
     FP_TYPE origf0 = iframe -> f0;
     iframe -> f0 *= argc > 2 ? atof(argv[2]) : 1.0;
-    //iframe -> f0 += f0_vel;
     FP_TYPE freq[512];
     for(int j = 0; j < iframe -> sinu -> nhar; j ++) {
       freq[j] = iframe -> f0 * (j + 1.0);
@@ -122,7 +120,6 @@ int main(int argc, char** argv) {
     }
     FP_TYPE* newampl = interp1(faxis, model_lv1 -> vt_resp_magn[i], nfft / 2 + 1, freq, iframe -> sinu -> nhar);
     for(int j = 0; j < iframe -> sinu -> nhar; j ++) newampl[j] = exp(newampl[j]);
-    FP_TYPE* phaseresp = minphase(model_lv1 -> vt_resp_magn[i], nfft);
     FP_TYPE* newphse = llsm_harmonic_minphase(newampl, iframe -> sinu -> nhar);
     FP_TYPE* lipampl = interp1(faxis, model_lv1 -> lip_resp_magn, nfft / 2 + 1, freq, iframe -> sinu -> nhar);
     FP_TYPE* lipphse = interp1(faxis, model_lv1 -> lip_resp_phse, nfft / 2 + 1, freq, iframe -> sinu -> nhar);
@@ -134,11 +131,10 @@ int main(int argc, char** argv) {
 
     free(newampl);
     free(newphse);
-    free(phaseresp);
     free(lipampl);
     free(lipphse);
   }
-  free(faxis); free(freqwarp);
+  free(faxis);
   llsm_delete_layer1(model_lv1);
   
   phase0 = calloc(nfrm, sizeof(FP_TYPE));
@@ -161,7 +157,7 @@ int main(int argc, char** argv) {
   llsm_deinit(lparam);
   llsm_delete_layer0(model);
   free(f0);
-  free(x); // free(y);
+  free(x);
   llsm_delete_output(out);
 
   return 0;
