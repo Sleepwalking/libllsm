@@ -224,7 +224,7 @@ static int harmonic_peak_picking(llsm_parameters param, FP_TYPE* spectrum, FP_TY
     int l_idx = round(f0 * (i - hardev) / fs * nfft);
     int u_idx = round(f0 * (i + hardev) / fs * nfft);
     l_idx = l_idx < 1 ? 1 : l_idx;
-    u_idx = u_idx > nfft / 2 ? nfft / 2 : u_idx;
+    u_idx = u_idx > nfft / 2 - 1 ? nfft / 2 - 1 : u_idx;
 
     int peak_bin = cig_find_peak(spectrum, l_idx, u_idx, 1);
     
