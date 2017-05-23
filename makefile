@@ -5,7 +5,7 @@ AR = $(CROSS)ar
 CFLAGS = -DFP_TYPE=float -Og -g -std=c99 -Wall -fPIC -fopenmp $(CFLAGSEXT)
 ARFLAGS = -rv
 OUT_DIR = ./build
-OBJS = $(OUT_DIR)/math-funcs.o $(OUT_DIR)/llsm-level0.o $(OUT_DIR)/llsm-level1.o $(OUT_DIR)/envelope.o
+OBJS = $(OUT_DIR)/math-funcs.o $(OUT_DIR)/llsm-layer0.o $(OUT_DIR)/llsm-layer1.o $(OUT_DIR)/envelope.o
 LIBPYIN = external/libpyin
 LIBGVPS = $(LIBPYIN)/external/libgvps
 
@@ -32,8 +32,8 @@ $(OUT_DIR)/libllsm.a: $(OBJS)
 	@echo Done.
 
 $(OUT_DIR)/math-funcs.o : math-funcs.c math-funcs.h
-$(OUT_DIR)/llsm-level0.o : llsm-level0.c llsm.h envelope.h math-funcs.h
-$(OUT_DIR)/llsm-level1.o : llsm-level1.c llsm.h envelope.h math-funcs.h
+$(OUT_DIR)/llsm-layer0.o : llsm-layer0.c llsm.h envelope.h math-funcs.h
+$(OUT_DIR)/llsm-layer1.o : llsm-layer1.c llsm.h envelope.h math-funcs.h
 $(OUT_DIR)/envelope.o : envelope.c envelope.h math-funcs.h
 
 $(OUT_DIR)/ciglet.o : external/ciglet/ciglet.c
