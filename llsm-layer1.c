@@ -212,14 +212,28 @@ static FP_TYPE* calculate_harmonic_spectrum(FP_TYPE* ampl, int nhar, FP_TYPE f0,
   return X;
 }
 
-FP_TYPE* llsm_harmonic_cheaptrick(FP_TYPE* ampl, int nhar, FP_TYPE f0, int nfft, FP_TYPE fs) {
-  FP_TYPE* X = calculate_harmonic_spectrum(ampl, nhar, f0, nfft, fs);
-  FP_TYPE peak = maxfp(X, nfft / 2 + 1);
-  for(int j = 0; j < nfft / 2 + 1; j ++)
-    X[j] = max(X[j], peak * 1e-10);
+static FP_TYPE range_compress(FP_TYPE x) {
+  if(x > -10) return x;
+  return (x + 10.0) / 2 - 10.0;
+}
 
-  FP_TYPE* full_spectrum = cig_spec2env(X, nfft, f0 / fs, NULL);
+static FP_TYPE range_decompress(FP_TYPE x) {
+  if(x > -10) return x;
+  return (x + 10.0) * 2 - 10.0;
+}
+
+FP_TYPE* llsm_harmonic_cheaptrick(FP_TYPE* ampl, int nhar, FP_TYPE f0, int nfft, FP_TYPE fs) {
+  FP_TYPE* compampl = calloc(nhar, sizeof(FP_TYPE));
+  FP_TYPE peak = log(maxfp(ampl, nhar)) + 1;
+  for(int i = 0; i < nhar; i ++)
+    compampl[i] = exp(range_compress(log(ampl[i]) - peak));
+
+  FP_TYPE* X = calculate_harmonic_spectrum(compampl, nhar, f0, nfft, fs);
+  FP_TYPE* full_spectrum = cig_spec2env(X, nfft, f0 / fs, nhar, NULL);
   free(X);
+  for(int i = 0; i < nfft / 2 + 1; i ++)
+    full_spectrum[i] = range_decompress(full_spectrum[i]) + peak;
+  free(compampl);
   return full_spectrum;
 }
 
