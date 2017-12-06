@@ -3,6 +3,8 @@ libllsm
 
 Low Level Speech Model for high-quality speech analysis/synthesis
 
+**[libllsm2](https://github.com/Sleepwalking/libllsm2) is out. This version is no longer maintained.**
+
 About
 ---
 
